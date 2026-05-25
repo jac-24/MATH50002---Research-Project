@@ -1,0 +1,14 @@
+name = "algebraicgeometry"
+version = "0.1.0"
+defaultTargets = ["algebraicgeometry"]
+
+[[lean_lib]]
+name = "Algebraicgeometry"
+
+[[require]]
+name = "mathlib"
+scope = "leanprover-community"
+
+[[lean_exe]]
+name = "algebraicgeometry"
+root = "Main"

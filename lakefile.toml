@@ -1,0 +1,10 @@
+name = "myprojecy"
+version = "0.1.0"
+defaultTargets = ["myprojecy"]
+
+[[lean_lib]]
+name = "Myprojecy"
+
+[[lean_exe]]
+name = "myprojecy"
+root = "Main"
