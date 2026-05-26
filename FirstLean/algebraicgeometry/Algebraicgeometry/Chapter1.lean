@@ -46,6 +46,31 @@ theorem closedUnderIntersection (Func₀ Func₁ : Set (MvPolynomial σ K)) :
         apply h; exact Set.mem_union_right Func₀ hp
 
 
+theorem closedUnderArbitraryIntersection (Func : σ → Set (MvPolynomial σ K)) :
+  ⋂ i, (affineVariety (Func i)) = affineVariety (⋃ i, Func i) := by
+  ext x
+  constructor
+  · intro h
+    have in_every_set : ∀ i : σ, x ∈ affineVariety (Func i) := by
+      rw [Set.mem_iInter] at h
+      exact h
+    intro p hp
+    have in_some_set : ∃ j : σ, p ∈ Func j := by
+      rw [Set.mem_iUnion] at hp
+      exact hp
+    rcases in_some_set with ⟨index, h_index⟩
+    have in_index : x ∈ affineVariety (Func index) := by
+      apply in_every_set
+    apply in_index
+    exact h_index
+  · intro h
+    rw [Set.mem_iInter]
+    intro index p hp
+    apply h
+    rw [Set.mem_iUnion]
+    use index
+
+
 theorem closedUnderUnion (Func₀ Func₁ : Set (MvPolynomial σ K)) :
   affineVariety Func₀ ∪ affineVariety Func₁ = affineVariety (Func₀ * Func₁) := by
   ext x --- Introduces the x for dual inclusion

@@ -19,3 +19,5 @@ variable {σ : Type*} [Fintype σ]
 
 def affineVariety (Funcs : Set (MvPolynomial σ K)): Set (σ → K) :=
     {x : σ → K | ∀ p ∈ Funcs, p.eval x = 0}
+
+
