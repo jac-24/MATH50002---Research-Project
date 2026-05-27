@@ -7,6 +7,7 @@ import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Finiteness.Defs
 import Mathlib.RingTheory.Nullstellensatz
+import Mathlib.Topology.Defs.Basic
 
 noncomputable section
 
@@ -129,5 +130,53 @@ theorem basisSameVariety (Func₀ Func₁ : Set (MvPolynomial σ K)) :
       sorry
     · sorry
   · sorry
+
+
+instance affineTopology : TopologicalSpace (σ → K) where
+  IsOpen s := ∃ P : Set (MvPolynomial σ K), affineVariety P = sᶜ
+
+  isOpen_univ := by
+    use {1}
+    rw [affineVariety]
+    simp
+
+  isOpen_inter := by
+    intro s t hs ht
+    obtain ⟨P1, h1⟩ := hs
+    obtain ⟨P2, h2⟩ := ht
+    use (P1 * P2)
+    rw [← closedUnderUnion]
+    rw [h1, h2]
+    rw [compl_inter]
+
+  isOpen_sUnion := by
+    intro S hS
+    use ⋃₀ {P | ∃ t ∈ S, affineVariety P = tᶜ}
+    ext x
+    constructor
+    · intro LHS p
+      obtain ⟨t', t'S, xt⟩ := p
+      obtain ⟨P', hP'⟩ := hS t' t'S
+      have x_in_compl : x ∈ t'ᶜ := by
+        rw [← hP']
+        rw [affineVariety, mem_setOf_eq]
+        intro f hf
+        rw [affineVariety] at LHS
+        apply LHS
+        exact ⟨P', ⟨t', t'S, hP'⟩, hf⟩
+      apply x_in_compl
+      exact xt
+    · intro xsUnion p hp
+      simp only [mem_compl_iff, mem_sUnion, not_exists, not_and] at xsUnion
+      simp only [mem_sUnion, mem_setOf_eq] at hp
+      obtain ⟨P', hP', hP''⟩ := hp
+      rw [affineVariety] at hP'
+      obtain ⟨t', ht'S, ht'⟩ := hP'
+      have x_notin_t' : x ∈ t'ᶜ := by
+        apply xsUnion t' ht'S
+      rw [← ht'] at x_notin_t'
+      apply x_notin_t'
+      exact hP''
+
 
 end algebraicGeometry
