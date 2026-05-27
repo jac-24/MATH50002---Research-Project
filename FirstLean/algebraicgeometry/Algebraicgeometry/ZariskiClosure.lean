@@ -1,0 +1,209 @@
+import Mathlib.Algebra.MvPolynomial.Basic
+import Mathlib.Algebra.MvPolynomial.Eval
+import Mathlib.RingTheory.Ideal.Basic
+import Mathlib.RingTheory.Ideal.Basis
+import Mathlib.RingTheory.Ideal.Span
+--- Needed for Hilbert Basis Theorem
+import Mathlib.RingTheory.Noetherian.Defs
+import Mathlib.RingTheory.Finiteness.Defs
+import Mathlib.RingTheory.Nullstellensatz
+import Mathlib.LinearAlgebra.Finsupp.LinearCombination
+import Algebraicgeometry.Chapter2
+
+
+noncomputable section
+
+namespace ClassicalAlgebraicGeometry
+variable {K : Type*} [Field K]
+variable {σ : Type*}
+
+
+def affineVariety (F : Set (MvPolynomial σ K)): Set (σ → K) :=
+    {x : σ → K | ∀ p ∈ F, (MvPolynomial.eval x) p = 0}
+
+
+@[simp]
+theorem memAffineVariety {Funcs : Set (MvPolynomial σ K)} {x : σ → K} :
+  x ∈ affineVariety Funcs ↔ ∀ p ∈ Funcs, (MvPolynomial.eval x) p = 0 := by
+  rfl
+
+
+@[simp]
+theorem notInZeroLocus {x : σ → K} {I : Ideal (MvPolynomial σ K)} :
+  x ∉ MvPolynomial.zeroLocus K I ↔ ∃ f ∈ I, (MvPolynomial.eval x) f ≠ 0 := by
+  contrapose!
+  exact MvPolynomial.mem_zeroLocus_iff
+
+
+theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
+  MvPolynomial.zeroLocus K (I + J) = MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J := by
+    ext x
+    constructor
+    · intro h
+      constructor
+      · intro p hp --- p is the polynomial we need to evaluate to 0
+        apply h
+        apply Ideal.mem_sup_left --- Have that p ∈ I implies p ∈ I + J
+        exact hp --- So as all polynomials in I + J vanish at x we are done
+      · intro p hp --- Analogous to the above
+        apply h
+        apply Ideal.mem_sup_right
+        exact hp
+    · intro h p hp --- p is the polynomial we need to evaluate to 0
+      have is_sum : ∃ f ∈ I, ∃ g ∈ J, f + g = p := by
+        simp only [add_eq_sup] at hp --- I + J = I ⊔ J, this is how the sum is represented in Mathlib, as supremum of the ideals
+        apply Submodule.mem_sup.mp --- By definition if an element is in the sum of ideals it can be written as a sum of two elements, each one in one of the ideals
+        exact hp
+      simp only [Set.mem_inter_iff, MvPolynomial.mem_zeroLocus_iff, MvPolynomial.aeval_eq_eval] at h --- Unpacks the defintion of x being in the set given by h
+      rcases is_sum with ⟨f, hf, g, hg, f_g_sum⟩ --- Get the MvPolynomials that p can be written as a sum of
+      subst f_g_sum --- Substitute them in
+      simp only [MvPolynomial.aeval_eq_eval, map_add]
+      simp [h, hf, hg]
+
+
+theorem productZeroLocus (I J : Ideal (MvPolynomial σ K)) :
+  MvPolynomial.zeroLocus K (I * J) = MvPolynomial.zeroLocus K I ∪ MvPolynomial.zeroLocus K J := by
+  ext x
+  constructor
+  · intro h
+    have product_zero : ∀ f ∈ I, ∀ g ∈ J, (MvPolynomial.eval x) (f * g) = 0 := by --- This is essentially trivial as f * g ∈ I * J, ∀ f ∈ I, ∀ g ∈ J
+        intro f hf g hg
+        apply h
+        apply Ideal.mul_mem_mul --- f * g ∈ I * J
+        exact hf
+        exact hg
+    by_cases h' : x ∈ MvPolynomial.zeroLocus K I --- Split into cases as easier to get use contradiction like this
+    · left
+      exact h'
+    · right
+      by_contra h'' --- Suppose for contradiction that we also have x ∉ MvPolynomial.zeroLocus K J
+      have get_contra : ¬(∀ f ∈ I, ∀ g ∈ J, (MvPolynomial.eval x) (f * g) = 0) := by --- Write statement like this so contradiction tactic works
+        push Not
+        rw [notInZeroLocus] at h' h''
+        rcases h' with ⟨f, inI, hf⟩
+        rcases h'' with ⟨g, inJ, hg⟩
+        use f --- Verifying that f * g does not evaluate to 0 at x
+        constructor
+        · exact inI
+        · use g
+          constructor
+          · exact inJ
+          · simp only [map_mul]
+            simp [hf, hg]
+      contradiction
+  · intro h p hp
+    rcases h with inI | inJ
+    --- Looks the same as in the previous part part but true for a different reason, x ∈ MvPolynomial.zeroLocus K I, so
+    --- any product including a function in I will evaluate to 0 at x
+    · have product_zero : ∀ f ∈ I, ∀ g ∈ J, (MvPolynomial.eval x) (f * g) = 0 := by
+        intro f hf g hg
+        simp only [map_mul, mul_eq_zero]
+        left
+        apply inI
+        exact hf
+      #check Submodule.mul_induction_on
+      sorry
+    sorry
+
+      -- have h' : p ∈ I * J := by exact hp
+      -- rw [ Submodule.mul_eq_span_mul_set] at hp
+      -- have : ∃ (l : I*J →₀ MvPolynomial σ K), (Finsupp.linearCombination (MvPolynomial σ K) Subtype.val) l = p := by
+      --   apply (Finsupp.mem_span_iff_linearCombination (MvPolynomial σ K) (I*J) (p)).1
+      --   simp only [Submodule.span_coe_eq_restrictScalars, Submodule.restrictScalars_self]
+      --   exact h'
+      -- rcases this with ⟨a, b⟩
+      -- subst b
+      -- rw [ Finsupp.linearCombination_apply]
+      -- simp [ Finsupp.sum]
+
+
+theorem intersectionInsideGivesUnion (I J : Ideal (MvPolynomial σ K)) :
+  MvPolynomial.zeroLocus K (I ⊓ J) = MvPolynomial.zeroLocus K I ∪ MvPolynomial.zeroLocus K J := by
+  ext x
+  constructor
+  · intro h
+    have inter_le_product : MvPolynomial.zeroLocus K (I ⊓ J) ⊆ MvPolynomial.zeroLocus K (I * J) := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact Ideal.mul_le_inf
+    rw [productZeroLocus] at inter_le_product --- zeroLocus K (I * J) = zeroLocus K I ∪ zeroLocus K J from earlier theorem
+    apply inter_le_product
+    exact h
+  · intro h p hp --- This is essentially trivial as p ∈ I ⊓ J so is p ∈ I ∧ p ∈ J, so will be 0 ∀ x ∈ zeroLocus K I, ∀ x ∈ zeroLocus K J
+    simp only [Submodule.mem_inf] at hp
+    rcases hp with ⟨p_inI, p_inJ⟩
+    rcases h with inI | inJ
+    · rw [MvPolynomial.mem_zeroLocus_iff] at inI
+      apply inI
+      exact p_inI
+    · rw [MvPolynomial.mem_zeroLocus_iff] at inJ
+      apply inJ
+      exact p_inJ
+
+
+--- This is essentially true because of Hilbert's Basis Theorem
+@[simp]
+theorem zeroLocusOfVanishingIsVariety {σ : Type*} [Fintype σ] {S : Set (σ → K)} :
+  ∃ F : Set (MvPolynomial σ K), F.Finite ∧ MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) = affineVariety F := by
+  exact FiniteGenSets.isAffineVariety (MvPolynomial.vanishingIdeal K S)
+
+
+--- This says that for some set {f1,...,fs} we have that V(f1,...,fs) = V(<f1,...,fs>)
+--- First V is affine variety, second is the zero locus of the ideal generated by this set
+theorem zeroLocusOfGenSetIsVariety {σ : Type*} [Fintype σ] (F : Set (MvPolynomial σ K)) :
+  MvPolynomial.zeroLocus K (Ideal.span F) = affineVariety F := by
+  ext x
+  constructor
+  · intro h p hp
+    apply h
+    apply Ideal.subset_span --- The elements that generate an ideal are members of this ideal generated by them
+    exact hp
+  · intro h p hp
+    apply FiniteGenSets.inSpanAffineVarietyGenerators F h --- If all generators of an ideal vanish at x ∈ σ → K, then so will all elements of the ideal they generate
+    exact hp
+
+
+theorem zeroLocusOfVanishingAffineIsAffine {σ : Type*} [Fintype σ] (F : Set (MvPolynomial σ K)) :
+  MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K (affineVariety F)) = affineVariety F := by
+  ext x
+  constructor
+  · intro h
+    --- Basically if f ∈ <f1,...,fs> then it will vanish at any point where all these generators vanish
+    have gen_set_inclusion : Ideal.span F ≤ MvPolynomial.vanishingIdeal K (affineVariety F) := by
+      intro p hp y hy
+      apply FiniteGenSets.inSpanAffineVarietyGenerators F hy
+      exact hp
+    --- Use anti-monotonicity of zero loci
+    have affine_variety_reversed :
+    MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K (affineVariety F)) ≤ MvPolynomial.zeroLocus K (Ideal.span F) := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact gen_set_inclusion
+    rw [zeroLocusOfGenSetIsVariety F] at affine_variety_reversed --- Go from V(<f1,...,fs>) to V(f1,...,fs) as they are equal
+    apply affine_variety_reversed
+    exact h
+  · intro h p hp
+    apply hp
+    exact h
+
+
+theorem setContainedInVariety (S : Set (σ → K)) :
+  S ≤ MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) := by
+  intro x hx p hp
+  apply hp
+  exact hx
+
+
+--- V(I(S)) is the smallest variety containing S
+--- Need to include the fact that S ≤ V(I(S)) and that any other affine variety containing S contains V(I(S))
+theorem smallestVariety {σ : Type*} [Fintype σ] (S : Set (σ → K)) :
+  (∀ F : Set (MvPolynomial σ  K), S ⊆ affineVariety F → MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) ⊆ affineVariety F) ∧
+  (S ⊆ MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S)) := by
+  constructor
+  · intro F s_contain
+    rw [← zeroLocusOfVanishingAffineIsAffine F] --- V(I(V(F))) = F where V(F) is affine variety on F not zero locus
+    apply MvPolynomial.zeroLocus_anti_mono
+    apply MvPolynomial.vanishingIdeal_anti_mono
+    exact s_contain
+  · exact setContainedInVariety S
+
+
+end ClassicalAlgebraicGeometry
