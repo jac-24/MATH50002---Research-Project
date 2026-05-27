@@ -11,27 +11,46 @@ import Mathlib.LinearAlgebra.Finsupp.LinearCombination
 
 noncomputable section
 
-namespace AlgebraicGeometry
+namespace FiniteGenSets
 variable {K : Type*} [Field K]
-variable {σ : Type*} [Fintype σ]
+variable {σ : Type*}
 
 
-def affineVariety (Funcs : Set (MvPolynomial σ K)): Set (σ → K) :=
-    {x : σ → K | ∀ p ∈ Funcs, p.eval x = 0}
+def affineVariety (F : Set (MvPolynomial σ K)): Set (σ → K) :=
+    {x : σ → K | ∀ p ∈ F, (MvPolynomial.eval x) p = 0}
 
-
-
-theorem isAffineVariety (I : Ideal (MvPolynomial σ K)):
-  ∃ funcs : Set (MvPolynomial σ K), funcs.Finite ∧ MvPolynomial.zeroLocus K I = affineVariety funcs := by
-  have finitely_gen: I.FG := by --- Hilbert Basis theorem holds as MvPolynomial σ K a Noetherian ring
-    apply isNoetherian_def.1
+--- Need a finite indexing set (σ here) for this to be true
+theorem hasFiniteGenSet {σ : Type*} [Fintype σ] (I : Ideal (MvPolynomial σ K)):
+  ∃ F : Set (MvPolynomial σ K), F.Finite ∧ Submodule.span (MvPolynomial σ K) F = I := by
+  have finitely_gen : I.FG := by --- Hilbert Basis theorem holds as MvPolynomial σ K a Noetherian ring
+    apply isNoetherian_def.mp
     apply MvPolynomial.isNoetherianRing
-  --- Get the finite basis for the ideal as an ideal is a submodule of the module of the ring of MvPolynomial σ K
-  --- over itself. Also, need indexing set σ to be finite
-  have fin_basis : ∃ f : Set (MvPolynomial σ K), f.Finite ∧ Submodule.span (MvPolynomial σ K) f = I := by
-    apply Submodule.fg_def.mp
-    exact finitely_gen
-  rcases fin_basis with ⟨f, fin, span⟩ --- Extract the finite basis
+  apply Submodule.fg_def.mp --- By definition of being finitely generated it means that I has a finite generating set
+  exact finitely_gen
+
+
+theorem inSpanAffineVarietyGenerators {x : σ → K} (F : Set (MvPolynomial σ K)) (h : x ∈ affineVariety F) :
+  ∀ p ∈ Ideal.span F, (MvPolynomial.eval x) p = 0 := by
+  intro p hp
+  --- This gives us that p ∈ I = <f1,...,fs> means that it is a linear combination of these generators
+  have in_span: ∃ (l : ↑F →₀ MvPolynomial σ K), (Finsupp.linearCombination (MvPolynomial σ K) Subtype.val) l = p := by
+    apply (Finsupp.mem_span_iff_linearCombination (MvPolynomial σ K) (F) (p)).mp
+    exact hp
+  rcases in_span with ⟨coeffs, is_lin_comb⟩ --- Extract the coefficients
+  subst is_lin_comb
+  rw [Finsupp.linearCombination_apply (MvPolynomial σ K) (coeffs)] --- Writes the linear combination as an actual linear combination
+  have eval_zero : ∀ f ∈ F, (MvPolynomial.eval x) f = 0 := by
+    intro f hf
+    apply h
+    exact hf
+  simp [Finsupp.sum, eval_zero]
+
+
+theorem isAffineVariety {σ : Type*} [Fintype σ] (I : Ideal (MvPolynomial σ K)):
+  ∃ F : Set (MvPolynomial σ K), F.Finite ∧ MvPolynomial.zeroLocus K I = affineVariety F := by
+  have fin_gen_set : ∃ f : Set (MvPolynomial σ K), f.Finite ∧ Submodule.span (MvPolynomial σ K) f = I := by
+    apply hasFiniteGenSet
+  rcases fin_gen_set with ⟨f, fin, span⟩ --- Extract the finite basis
   use f
   constructor
   · exact fin
@@ -44,17 +63,7 @@ theorem isAffineVariety (I : Ideal (MvPolynomial σ K)):
       exact hp
     · intro h p hp
       subst span  --- I = <f1,...,fs>
-      --- This gives us that p ∈ I = <f1,...,fs> means that it is a linear combination of these generators
-      have in_span: ∃ (l : ↑f →₀ MvPolynomial σ K), (Finsupp.linearCombination (MvPolynomial σ K) Subtype.val) l = p := by
-        apply (Finsupp.mem_span_iff_linearCombination (MvPolynomial σ K) (f) (p)).1
-        exact hp
-      rcases in_span with ⟨coeffs, is_lin_comb⟩ --- Extract the coefficients
-      subst is_lin_comb
-      have eval_zero : ∀ f' ∈ f, (MvPolynomial.eval x) f' = 0 := by
-        intro f' hf'
-        apply h; exact hf'
-      rw [Finsupp.linearCombination_apply (MvPolynomial σ K) (coeffs)] --- Writes the linear combination as an actual linear combination
-      simp only [Finsupp.sum, smul_eq_mul, map_sum, MvPolynomial.aeval_eq_eval, map_mul,
-        Subtype.coe_prop, eval_zero, mul_zero, Finset.sum_const_zero]
+      apply inSpanAffineVarietyGenerators f h
+      exact hp
 
-end AlgebraicGeometry
+end FiniteGenSets
