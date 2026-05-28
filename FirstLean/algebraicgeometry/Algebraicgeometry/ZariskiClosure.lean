@@ -60,13 +60,14 @@ theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
       simp [h, hf, hg]
 
 
---- theorem isMemberOfProduct {x : σ → K} {I J : Ideal (MvPolynomial σ K)} :
-
-#check Submodule.mul_induction_on
 theorem inProductIsZero {x : σ → K} {I J : Ideal (MvPolynomial σ K)}
   (h : ∀ f ∈ I, ∀ g ∈ J, (MvPolynomial.eval x) (f * g) = 0) :
   ∀ p ∈ I * J, (MvPolynomial.eval x) p = 0 := by
-  sorry
+  intro p hp
+  refine Submodule.mul_induction_on (R := MvPolynomial σ K) (C := fun f : MvPolynomial σ K => (MvPolynomial.eval x) f = 0) hp ?_ ?_
+  · exact h --- Need to show that any product m * n where m ∈ I, n ∈ J evaluates to 0 at x as I * J consists of finite sums of these products
+  · intro a b ha hb --- Need to show that adding two functions that are 0 at x gives a function that is 0 at x
+    simp only [map_add, ha, hb, add_zero]
 
 
 theorem productZeroLocus (I J : Ideal (MvPolynomial σ K)) :
@@ -254,15 +255,15 @@ theorem vanishingIdealIntersectionUnion (S T : Set (σ → K)) :
   constructor
   · intro h x hx
     simp only [Submodule.mem_inf, MvPolynomial.mem_vanishingIdeal_iff,
-      MvPolynomial.aeval_eq_eval] at h
-    rcases h with ⟨vanish_S, vanish_T⟩
+      MvPolynomial.aeval_eq_eval] at h --- f vanishes on both S and T as in the intersection of their zero loci
+    rcases h with ⟨vanish_S, vanish_T⟩ --- As x ∈ S ∪ T this means that f will vanish at x, just split by whether in S or T
     by_cases inS : x ∈ S
     · apply vanish_S
       exact inS
     · simp only [Set.mem_union, inS, false_or] at hx
       apply vanish_T
       exact hx
-  · intro h
+  · intro h --- f vanishes on S ∪ T so will vanish on both S and T
     constructor
     · intro x hx
       apply h
@@ -274,6 +275,7 @@ theorem vanishingIdealIntersectionUnion (S T : Set (σ → K)) :
       exact hx
 
 
+--- This is true by putting by just rewriting some of theorems have already proved
 theorem zariskiClosureUnion {σ : Type*} [Fintype σ] (S T : Set (σ → K)) :
   zariskiClosure (S ∪ T) = zariskiClosure S ∪ zariskiClosure T := by
   rw [zariskiClosure, zariskiClosure, zariskiClosure]
@@ -281,5 +283,6 @@ theorem zariskiClosureUnion {σ : Type*} [Fintype σ] (S T : Set (σ → K)) :
   congr
   symm
   exact vanishingIdealIntersectionUnion S T
+
 
 end ClassicalAlgebraicGeometry
