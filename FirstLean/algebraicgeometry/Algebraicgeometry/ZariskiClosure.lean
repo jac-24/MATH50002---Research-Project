@@ -10,7 +10,6 @@ import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.LinearAlgebra.Finsupp.LinearCombination
 import Algebraicgeometry.Chapter2
 
-
 noncomputable section
 
 namespace ClassicalAlgebraicGeometry
@@ -18,13 +17,13 @@ variable {K : Type*} [Field K]
 variable {σ : Type*}
 
 
-def affineVariety (F : Set (MvPolynomial σ K)): Set (σ → K) :=
+def affineVariety (F : Set (MvPolynomial σ K)) : Set (σ → K) :=
     {x : σ → K | ∀ p ∈ F, (MvPolynomial.eval x) p = 0}
 
 
 @[simp]
-theorem memAffineVariety {Funcs : Set (MvPolynomial σ K)} {x : σ → K} :
-  x ∈ affineVariety Funcs ↔ ∀ p ∈ Funcs, (MvPolynomial.eval x) p = 0 := by
+theorem memAffineVariety {F : Set (MvPolynomial σ K)} {x : σ → K} :
+  x ∈ affineVariety F ↔ ∀ p ∈ F, (MvPolynomial.eval x) p = 0 := by
   rfl
 
 
@@ -59,6 +58,15 @@ theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
       subst f_g_sum --- Substitute them in
       simp only [MvPolynomial.aeval_eq_eval, map_add]
       simp [h, hf, hg]
+
+
+--- theorem isMemberOfProduct {x : σ → K} {I J : Ideal (MvPolynomial σ K)} :
+
+#check Submodule.mul_induction_on
+theorem inProductIsZero {x : σ → K} {I J : Ideal (MvPolynomial σ K)}
+  (h : ∀ f ∈ I, ∀ g ∈ J, (MvPolynomial.eval x) (f * g) = 0) :
+  ∀ p ∈ I * J, (MvPolynomial.eval x) p = 0 := by
+  sorry
 
 
 theorem productZeroLocus (I J : Ideal (MvPolynomial σ K)) :
@@ -101,20 +109,17 @@ theorem productZeroLocus (I J : Ideal (MvPolynomial σ K)) :
         left
         apply inI
         exact hf
-      #check Submodule.mul_induction_on
-      sorry
-    sorry
-
-      -- have h' : p ∈ I * J := by exact hp
-      -- rw [ Submodule.mul_eq_span_mul_set] at hp
-      -- have : ∃ (l : I*J →₀ MvPolynomial σ K), (Finsupp.linearCombination (MvPolynomial σ K) Subtype.val) l = p := by
-      --   apply (Finsupp.mem_span_iff_linearCombination (MvPolynomial σ K) (I*J) (p)).1
-      --   simp only [Submodule.span_coe_eq_restrictScalars, Submodule.restrictScalars_self]
-      --   exact h'
-      -- rcases this with ⟨a, b⟩
-      -- subst b
-      -- rw [ Finsupp.linearCombination_apply]
-      -- simp [ Finsupp.sum]
+      apply inProductIsZero product_zero --- As any element in I * J is a finite sum of product i * j, i ∈ I, j ∈ J we're done
+      exact hp
+    --- Analogous to above
+    · have product_zero : ∀ f ∈ I, ∀ g ∈ J, (MvPolynomial.eval x) (f * g) = 0 := by
+        intro f hf g hg
+        simp only [map_mul, mul_eq_zero]
+        right
+        apply inJ
+        exact hg
+      apply inProductIsZero product_zero
+      exact hp
 
 
 theorem intersectionInsideGivesUnion (I J : Ideal (MvPolynomial σ K)) :
@@ -205,5 +210,76 @@ theorem smallestVariety {σ : Type*} [Fintype σ] (S : Set (σ → K)) :
     exact s_contain
   · exact setContainedInVariety S
 
+
+--- Zariski closure of a set S is V(I(S))
+def zariskiClosure (S : Set (σ → K)) : Set (σ → K) :=
+  MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S)
+
+
+theorem vanishingIdealZariskiClosure {σ : Type*} [Fintype σ] (S : Set (σ → K)) :
+  MvPolynomial.vanishingIdeal K (zariskiClosure S) = MvPolynomial.vanishingIdeal K S := by
+  ext f --- Introduce the function in the ideal
+  constructor
+  · apply MvPolynomial.vanishingIdeal_anti_mono --- This direction is trivial as S ⊆ zariskiClosure S
+    apply setContainedInVariety
+  · intro h x hx
+    have in_affine : S ⊆ affineVariety {f} := by --- f ∈ I(S) so vanishes at all points in S so by definition S ∈ V({f})
+      intro y hy
+      simp only [memAffineVariety, Set.mem_singleton_iff, forall_eq]
+      apply h
+      exact hy
+    have zar_closure_contain : zariskiClosure S ≤ affineVariety {f} := by --- zariskiClosure S = V(I(S)), V({f})  = V(I(V({f}))) so apply anti-monotonicity twice
+      rw [← zeroLocusOfVanishingAffineIsAffine, zariskiClosure]
+      apply MvPolynomial.zeroLocus_anti_mono
+      apply MvPolynomial.vanishingIdeal_anti_mono
+      exact in_affine
+    apply zar_closure_contain --- zariskiClosure S ≤ V({f}) so f will obviously vanish on zariskiClosure S
+    apply hx
+    simp only [Set.mem_singleton_iff]
+
+
+--- This is essentially by definition using anti-monotonicity
+theorem zariskiClosureSubset {σ : Type*} [Fintype σ] {S T : Set (σ → K)} :
+  S ≤ T → zariskiClosure S ≤ zariskiClosure T := by
+  intro h
+  rw [zariskiClosure, zariskiClosure]
+  apply MvPolynomial.zeroLocus_anti_mono
+  apply MvPolynomial.vanishingIdeal_anti_mono
+  exact h
+
+
+theorem vanishingIdealIntersectionUnion (S T : Set (σ → K)) :
+  MvPolynomial.vanishingIdeal K S ⊓ MvPolynomial.vanishingIdeal K T = MvPolynomial.vanishingIdeal K (S ∪ T) := by
+  ext f
+  constructor
+  · intro h x hx
+    simp only [Submodule.mem_inf, MvPolynomial.mem_vanishingIdeal_iff,
+      MvPolynomial.aeval_eq_eval] at h
+    rcases h with ⟨vanish_S, vanish_T⟩
+    by_cases inS : x ∈ S
+    · apply vanish_S
+      exact inS
+    · simp only [Set.mem_union, inS, false_or] at hx
+      apply vanish_T
+      exact hx
+  · intro h
+    constructor
+    · intro x hx
+      apply h
+      apply Set.mem_union_left
+      exact hx
+    · intro x hx
+      apply h
+      apply Set.mem_union_right
+      exact hx
+
+
+theorem zariskiClosureUnion {σ : Type*} [Fintype σ] (S T : Set (σ → K)) :
+  zariskiClosure (S ∪ T) = zariskiClosure S ∪ zariskiClosure T := by
+  rw [zariskiClosure, zariskiClosure, zariskiClosure]
+  rw [← intersectionInsideGivesUnion]
+  congr
+  symm
+  exact vanishingIdealIntersectionUnion S T
 
 end ClassicalAlgebraicGeometry
