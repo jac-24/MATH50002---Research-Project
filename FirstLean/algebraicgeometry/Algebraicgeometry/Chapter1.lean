@@ -139,23 +139,6 @@ theorem closedUnderUnion (Func₀ Func₁ : Set (MvPolynomial σ K)) :
       --- So we get our contradiction
       contradiction
 
-theorem basisSameVariety (Func₀ Func₁ : Set (MvPolynomial σ K)) :
-  Ideal.span Func₀ = Ideal.span Func₁ → affineVariety Func₀ = affineVariety Func₁ := by
-  intro h
-  ext x
-  constructor
-  · intro h'
-    intro f hf
-    have idealf : f ∈ Ideal.span Func₀ := by
-      rw [h] --- Suffices to show p ∈ Ideal.span Func₁ by h
-      exact Submodule.mem_span_of_mem hf --- An ideal is a submodule of the module of a ring over itself so can apply theorem about submodules
-    have : ∀ f ∈ Ideal.span Func₀, (MvPolynomial.eval x) f = 0 := by
-      intro g hg
-      rw [Ideal.mem_span] at hg
-      sorry
-    · sorry
-  · sorry
-
 
 instance affineTopology : TopologicalSpace (σ → K) where
   IsOpen s := ∃ P : Set (MvPolynomial σ K), affineVariety P = sᶜ
