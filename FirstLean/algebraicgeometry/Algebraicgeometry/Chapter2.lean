@@ -96,7 +96,7 @@ theorem isAffineVariety {σ : Type*} [Fintype σ] (I : Ideal (MvPolynomial σ K)
   constructor
   · exact fin
   · subst span
-    apply zeroLocusOfGenSetIsVariety F
+    exact zeroLocusOfGenSetIsVariety F
   -- · ext x
   --   constructor
   --   · intro h p hp --- Get MvPolynomial p that we need to evaluate to 0 at x

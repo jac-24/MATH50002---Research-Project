@@ -51,10 +51,10 @@ theorem interAffineVariety (F G : Set (MvPolynomial σ K)) :
 
 theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
   MvPolynomial.zeroLocus K (I + J) = MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J := by
-  rw [ Submodule.add_eq_sup] --- I + J = I ⊔ J in Lean
-  rw [← idealGeneratesItself I, ← idealGeneratesItself J] --- Replace all instances of I and J by <I> and <J>
+  rw [Submodule.add_eq_sup] --- I + J = I ⊔ J in Lean
+  nth_rw 1 [← idealGeneratesItself I, ← idealGeneratesItself J] --- Replace all instances of I and J by <I> and <J>
   rw [← Ideal.span_union]
-  rw [zeroLocusOfGenSetIsVariety, zeroLocusOfGenSetIsVariety, zeroLocusOfGenSetIsVariety]
+  rw [zeroLocusOfGenSetIsVariety]
   apply unionAffineVariety
 
 
@@ -114,25 +114,15 @@ theorem zeroLocusOfGenSetIsVariety (F : Set (MvPolynomial σ K)) :
 
 theorem zeroLocusOfVanAffineIsAffine (F : Set (MvPolynomial σ K)) :
   MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K (affineVariety F)) = affineVariety F := by
-  ext x
-  constructor
-  · intro h
-    --- Basically if f ∈ <f1,...,fs> then it will vanish at any point where all these generators vanish
-    have gen_set_inclusion : Ideal.span F ≤ MvPolynomial.vanishingIdeal K (affineVariety F) := by
-      intro p hp y hy
-      apply inSpanAffineVarietyGenerators F hy
-      exact hp
-    --- Use anti-monotonicity of zero loci
-    have affine_variety_reversed :
-    MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K (affineVariety F)) ≤ MvPolynomial.zeroLocus K (Ideal.span F) := by
-      apply MvPolynomial.zeroLocus_anti_mono
-      exact gen_set_inclusion
-    rw [zeroLocusOfGenSetIsVariety F] at affine_variety_reversed --- Go from V(<f1,...,fs>) to V(f1,...,fs) as they are equal
-    apply affine_variety_reversed
-    exact h
-  · intro h p hp
+  apply le_antisymm
+  · nth_rw 2 [← zeroLocusOfGenSetIsVariety F]
+    apply MvPolynomial.zeroLocus_anti_mono
+    intro p hp y hy
+    apply inSpanAffineVarietyGenerators F hy
+    exact hp
+  · intro x hx p hp
     apply hp
-    exact h
+    exact hx
 
 
 theorem setContainedInVariety (S : Set (σ → K)) :
@@ -144,7 +134,7 @@ theorem setContainedInVariety (S : Set (σ → K)) :
 
 --- V(I(S)) is the smallest variety containing S
 --- Need to include the fact that S ≤ V(I(S)) and that any other affine variety containing S contains V(I(S))
-theorem smallestVariety (S : Set (σ → K)) :
+theorem smallestVariety {σ : Type*} [Fintype σ] (S : Set (σ → K)) :
   (∀ F : Set (MvPolynomial σ  K), S ⊆ affineVariety F → MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) ⊆ affineVariety F) ∧
   (S ⊆ MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S)) ∧
   (∃ G : Set (MvPolynomial σ K), MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) = affineVariety G) := by
@@ -156,8 +146,8 @@ theorem smallestVariety (S : Set (σ → K)) :
     exact s_contain
   · constructor
     · exact setContainedInVariety S
-    · use (MvPolynomial.vanishingIdeal K S)
-      trivial
+    · rcases isAffineVariety (σ := σ) (I := (MvPolynomial.vanishingIdeal K S)) with ⟨F, finite, eq⟩
+      use F
 
 
 --- Zariski closure of a set S is V(I(S))
@@ -238,9 +228,9 @@ def zariskiDense (F : Set (MvPolynomial σ K)) (S : Set (σ → K)) : Prop :=
 
 
 def isIrreducible (F : Set (MvPolynomial σ K)) : Prop :=
-  ∀ G H : Set (MvPolynomial σ K),
+  (∀ G H : Set (MvPolynomial σ K),
   affineVariety F = affineVariety G ∪ affineVariety H → (affineVariety F = affineVariety G ∨
-  affineVariety F = affineVariety H)
+  affineVariety F = affineVariety H)) ∧ (affineVariety F ≠ ∅)
 
 
 lemma inAffVarUnion {x : σ → K} (F : Set (MvPolynomial σ K)) (f : MvPolynomial σ K)
@@ -256,7 +246,7 @@ lemma inAffVarUnion {x : σ → K} (F : Set (MvPolynomial σ K)) (f : MvPolynomi
     exact h'
 
 
-theorem varietyEqualUnion (F : Set (MvPolynomial σ K)) (f g : MvPolynomial σ K)
+lemma varietyEqualUnion (F : Set (MvPolynomial σ K)) (f g : MvPolynomial σ K)
   (h : f * g ∈ MvPolynomial.vanishingIdeal K (affineVariety F)) :
   affineVariety F = (affineVariety (F ∪ {f})) ∪ (affineVariety (F ∪ {g})) := by
   --- (f * g)(x) = 0 for x ∈ V(F) so must have f(x) = 0 ∨ g(x) = 0
@@ -316,7 +306,7 @@ lemma equalityVanishingIdeal {F G H : Set (MvPolynomial σ K)}
     simp [h]
   · intro g hg
     have strict_ineq : MvPolynomial.vanishingIdeal K (affineVariety F) < MvPolynomial.vanishingIdeal K (affineVariety G) := by
-      apply strictVanishingIdealAntiMono --- Just need to show V(F) < V(G) using the anti-monotonicity result
+      apply strictVanishingIdealAntiMono --- Just need to show V(G) < V(F) using the anti-monotonicity result
       apply Set.ssubset_iff_subset_ne.2 --- This strict inequality results from V(G) ≤ V(F) by the union, and V(F) ≠ V(G) by another hypothesis
       constructor
       · simp [h]
@@ -325,7 +315,7 @@ lemma equalityVanishingIdeal {F G H : Set (MvPolynomial σ K)}
     --- An equivalent definition for one set (here ideals are treated as sets) being included in another is that
     --- there exists an element in one but not the other and we have a weak inequality between the sets
     rw [SetLike.lt_iff_le_and_exists] at strict_ineq
-    rcases strict_ineq with ⟨is_subset, f, inG, not_inF⟩ --- Extract the function f ∈ V(F) with f ∉ V(G)
+    rcases strict_ineq with ⟨is_subset, f, inG, not_inF⟩ --- Extract the function f ∉ I(V(F)) with f ∈ I(V(G))
     have in_van_ideal_F : (f * g) ∈ MvPolynomial.vanishingIdeal K (affineVariety F) := by
       intro y hy
       simp only [MvPolynomial.aeval_eq_eval, map_mul, mul_eq_zero] --- Need to show either f(y) = 0 or g(y) = 0
@@ -348,18 +338,25 @@ lemma equalityVanishingIdeal {F G H : Set (MvPolynomial σ K)}
     exact prime
 
 
-theorem vanishingIdealNotTopIff {S : Set (σ → K)} :
+lemma vanishingIdealNotTopIff {S : Set (σ → K)} :
   MvPolynomial.vanishingIdeal K S ≠ ⊤ ↔ S ≠ ∅ := by
   constructor
   · contrapose
     intro h
     simp [h, MvPolynomial.vanishingIdeal_empty]
   · intro h
+    symm at h
+    rw [← Set.nonempty_iff_empty_ne, Set.nonempty_def] at h
+    rcases h with ⟨x, hx⟩
+    simp
+    intro h'
     sorry
 
 
+
+
 --- Just apply the fact that V(I(V(F))) = V(F)
-lemma vanishingIdealOneToOne {F G : Set (MvPolynomial σ K)} :
+theorem vanishingIdealOneToOne {F G : Set (MvPolynomial σ K)} :
   MvPolynomial.vanishingIdeal K (affineVariety F) = MvPolynomial.vanishingIdeal K (affineVariety G)
    → affineVariety F = affineVariety G := by
   intro h
@@ -368,37 +365,43 @@ lemma vanishingIdealOneToOne {F G : Set (MvPolynomial σ K)} :
 
 
 --- How to include non-emptiness of V(F) as this is required for I(V(F)) to be proper
-theorem irreduciblePrimeIdeal (F : Set (MvPolynomial σ K)) (non_empty : affineVariety F ≠ ∅):
+theorem irreduciblePrimeIdeal (F : Set (MvPolynomial σ K)):
   isIrreducible F ↔ (MvPolynomial.vanishingIdeal K (affineVariety F)).IsPrime := by
   constructor
   · intro h
     rw [Ideal.isPrime_iff]
     constructor
-    · apply vanishingIdealNotTopIff.2 --- Need to show I(V(F)) is proper in this part so need V(F) ≠ ∅
-      exact non_empty
+    · apply vanishingIdealNotTopIff.mpr --- Need to show I(V(F)) is proper in this part so need V(F) ≠ ∅
+      exact h.2
     · intro f g hfg
       --- This is the right union to apply irreducibility to
       --- Have either of these equalities as V(F) equal to the union of these varieties so can use irreducibility
-      have : affineVariety F = affineVariety (F ∪ {f}) ∨ affineVariety F = affineVariety (F ∪ {g}) := by
-        apply h
+      have eq_union : affineVariety F = affineVariety (F ∪ {f}) ∨ affineVariety F = affineVariety (F ∪ {g}) := by
+        apply h.1
         exact varietyEqualUnion F f g hfg
-      rcases this with a | b --- Either V(F) = V(F ∪ {f}) or V(F) = V(F ∪ {g})
+      rcases eq_union with with_f | with_g --- Either V(F) = V(F ∪ {f}) or V(F) = V(F ∪ {g})
       · left
         intro x hx
-        simp only [a, union_singleton, FiniteGenSets.memAffineVariety, mem_insert_iff,
+        simp only [with_f, union_singleton, FiniteGenSets.memAffineVariety, mem_insert_iff,
           forall_eq_or_imp] at hx --- x ∈ V(F) = V(F ∪ {f}) so f vanishes at x as required
         simp only [MvPolynomial.aeval_eq_eval, hx]
       · right --- Analogous to the above
         intro x hx
-        simp only [b, union_singleton, FiniteGenSets.memAffineVariety, mem_insert_iff,
+        simp only [with_g, union_singleton, FiniteGenSets.memAffineVariety, mem_insert_iff,
           forall_eq_or_imp] at hx
         simp only [MvPolynomial.aeval_eq_eval, hx]
-  · intro h G H h' --- Introduce the affine varieties V(F) is equal to a union of
-    by_cases in_affvar_G : affineVariety F = affineVariety G
-    · simp [in_affvar_G] --- We are immediately done if V(F) = V(G)
-    · right --- Want to show V(F) = V(H) as know V(F) ≠ V(G)
-      apply vanishingIdealOneToOne --- Suffices to show I(V(F)) = I(V(H)) as I one-to-one on varieties
-      exact equalityVanishingIdeal h' in_affvar_G h
+  · intro h
+    constructor
+    · intro G H h' --- Introduce the affine varieties V(F) is equal to a union of
+      by_cases in_affvar_G : affineVariety F = affineVariety G
+      · simp [in_affvar_G] --- We are immediately done if V(F) = V(G)
+      · right --- Want to show V(F) = V(H) as know V(F) ≠ V(G)
+        apply vanishingIdealOneToOne --- Suffices to show I(V(F)) = I(V(H)) as I one-to-one on varieties
+        exact equalityVanishingIdeal h' in_affvar_G h
+      --- Also need to show that V(F) ≠ ∅
+    · rw [Ideal.isPrime_iff] at h
+      apply vanishingIdealNotTopIff.mp
+      exact h.1
 
 
 end ClassicalAlgebraicGeometry
@@ -492,3 +495,26 @@ end ClassicalAlgebraicGeometry
 --         exact hg
 --       apply inProductIsZero product_zero
 --       exact hp
+
+
+-- theorem zeroLocusOfVanAffineIsAffine (F : Set (MvPolynomial σ K)) :
+--   MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K (affineVariety F)) = affineVariety F := by
+--   ext x
+--   constructor
+--   · intro h
+--     --- Basically if f ∈ <f1,...,fs> then it will vanish at any point where all these generators vanish
+--     have gen_set_inclusion : Ideal.span F ≤ MvPolynomial.vanishingIdeal K (affineVariety F) := by
+--       intro p hp y hy
+--       apply inSpanAffineVarietyGenerators F hy
+--       exact hp
+--     --- Use anti-monotonicity of zero loci
+--     have affine_variety_reversed :
+--     MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K (affineVariety F)) ≤ MvPolynomial.zeroLocus K (Ideal.span F) := by
+--       apply MvPolynomial.zeroLocus_anti_mono
+--       exact gen_set_inclusion
+--     rw [zeroLocusOfGenSetIsVariety F] at affine_variety_reversed --- Go from V(<f1,...,fs>) to V(f1,...,fs) as they are equal
+--     apply affine_variety_reversed
+--     exact h
+--   · intro h p hp
+--     apply hp
+--     exact h
