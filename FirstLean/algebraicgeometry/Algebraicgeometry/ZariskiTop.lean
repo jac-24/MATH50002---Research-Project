@@ -60,66 +60,49 @@ theorem closedUnderUnion (F G : Set (MvPolynomial σ K)) :
   affineVariety F ∪ affineVariety G = affineVariety (F * G) := by
   ext x --- Introduces the x for dual inclusion
   constructor --- Splits the inclusion
-  · rintro (h₀ | h₁) --- Splits into either x ∈ affineVariety F or x ∈ affineVariety G
+  · rintro (h | h') --- Splits into either x ∈ affineVariety F or x ∈ affineVariety G
     · intro p hp --- Introduces the polynomial we must show evaluates to 0 at x
-      have proddef: ∃ f ∈ F, ∃ g ∈ G, f * g = p := by apply mem_mul.mp; apply hp --- Applies definition of product of two sets to extract concrete functions p can be written in terms of
-      rcases proddef with ⟨a, ha, b, hb, c⟩ --- Extract the polynomials that p can be written as a product of
-      have h' : (MvPolynomial.eval x) (a * b) = 0 := by
-        rw [MvPolynomial.eval_mul]
-        simp
-        left
-        apply h₀
-        exact ha --- Have that the product of these polynomials evaluates to 0 using definition of polynomial multiplication
-      subst c --- Substitute the product in for p
-      exact h'
+      rw [mem_mul] at hp
+      rcases hp with ⟨f, hf, g, hg, prod_eq⟩ --- Applies definition of product of two sets to extract concrete functions p can be written in terms of
+      subst prod_eq --- Substitute the product in for p
+      simp only [map_mul, mul_eq_zero]
+      left
+      apply h
+      exact hf
     · intro p hp --- This case is analogous to above
-      have proddef: ∃ f ∈ F, ∃ g ∈ G, f * g = p := by apply mem_mul.mp; apply hp --- Applies definition of product of two sets to extract concrete functions p can be written in terms of
-      rcases proddef with ⟨a, ha, b, hb, c⟩ --- Extract the polynomials that p can be written as a product of
-      have h' : (MvPolynomial.eval x) (a * b) = 0 := by
-        rw [MvPolynomial.eval_mul]
-        simp
-        right
-        apply h₁
-        exact hb --- Have that the product of these polynomials evaluates to 0 using definition of polynomial multiplication
-      subst c --- Substitute the product in for p
-      exact h'
+      rw [mem_mul] at hp
+      rcases hp with ⟨f, hf, g, hg, prod_eq⟩
+      subst prod_eq
+      simp only [map_mul, mul_eq_zero]
+      right
+      apply h'
+      exact hg
   · intro h
-    by_cases h' : x ∈ affineVariety F --- Split on whether x ∈ affineVariety Func₀ or not
+    by_cases h' : x ∈ affineVariety F --- Split on whether x ∈ affineVariety F or not
     · left --- In the case it is then the conclusion is immediate
       exact h'
     · right --- Now consider the case where we don't have this membership
-      by_contra h'' --- Will use contradiction so also assume x ∉ affineVariety Func₁
-      --- The following gives us the existence of a function in Func₀ and one in Func₁ which
-      --- doesn't evaluate to 0 at x using a contradiction
-      have existf : ∃ f ∈ F, (MvPolynomial.eval x) f ≠ 0 := by
-        by_contra hf
-        apply h'
-        push Not at hf
-        exact hf
-      have existg : ∃ g ∈ G, (MvPolynomial.eval x) g ≠ 0 := by
-        by_contra hg
-        apply h''
-        push Not at hg
-        exact hg
+      by_contra h'' --- Will use contradiction so also assume x ∉ affineVariety G
+      --- The following gives us the existence of a function in F and one in G which
+      --- doesn't evaluate to 0 at x
+      rw [memAffineVariety] at h' h''
+      push Not at h' h''
       --- Now extract these functions which don't evaluate to 0 at x
-      rcases existf with ⟨f, hypf, nonzerof⟩
-      rcases existg with ⟨g, hypg, nonzerog⟩
-      --- The product of these function belongs to Func₀ * Func₁ by definition
-      have membership : f * g ∈ F * G := by
-        apply mem_mul.mpr
+      rcases h' with ⟨f, hypf, non_zerof⟩
+      rcases h'' with ⟨g, hypg, non_zerog⟩
+      --- This product doesn't evaluate to 0 as we're in a field
+      have non_zero : (MvPolynomial.eval x) (f * g) ≠ 0 := by
+        rw [MvPolynomial.eval_mul]
+        apply mul_ne_zero
+        exact non_zerof; exact non_zerog
+      --- But we also get it does evaluate to 0 as x ∈ affineVariety (F * G)
+      have zero : (MvPolynomial.eval x) (f * g) = 0 := by
+        apply h
+        rw [mem_mul]
         use f
         constructor
         · exact hypf
         · use g
-      --- This product doesn't evaluate to 0 as we're in a field
-      have nonzero : (MvPolynomial.eval x) (f * g) ≠ 0 := by
-        rw [MvPolynomial.eval_mul]
-        apply mul_ne_zero
-        exact nonzerof; exact nonzerog
-      --- But we also get it does evaluate to 0 as x ∈ affineVariety (Func₀ * Func₁)
-      have zero : (MvPolynomial.eval x) (f * g) = 0 := by
-        apply h
-        exact membership
       --- So we get our contradiction
       contradiction
 

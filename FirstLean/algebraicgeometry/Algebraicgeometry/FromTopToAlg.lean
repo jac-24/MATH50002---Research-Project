@@ -161,11 +161,19 @@ lemma vanishingIdealNotTopIff {S : Set (σ → K)} :
     simp [h, MvPolynomial.vanishingIdeal_empty]
   · intro h
     symm at h
-    rw [← Set.nonempty_iff_empty_ne, Set.nonempty_def] at h
+    rw [← Set.nonempty_iff_empty_ne, Set.nonempty_def] at h --- A set is non-empty if it contains an element
     rcases h with ⟨x, hx⟩
-    simp
     intro h'
-    sorry
+    have ex_not_zero : ∃ f : MvPolynomial σ K, (MvPolynomial.eval x) f ≠ 0 := by
+      use 1 --- The constant function 1 is non-zero for all elements of σ → K
+      simp
+    rcases ex_not_zero with ⟨f, not_zero⟩
+    apply not_zero
+    have in_van_ideal : f ∈ MvPolynomial.vanishingIdeal K S := by --- f vanishes at x as the whole space does by assumption
+      rw [h']
+      simp
+    apply in_van_ideal
+    exact hx
 
 
 --- How to include non-emptiness of V(F) as this is required for I(V(F)) to be proper
