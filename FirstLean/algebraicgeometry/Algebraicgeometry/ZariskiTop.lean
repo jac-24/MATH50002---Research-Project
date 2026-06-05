@@ -4,6 +4,7 @@ import Mathlib.RingTheory.Ideal.Basic
 import Mathlib.RingTheory.Ideal.Basis
 import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Ideal.Prime
+import Mathlib.RingTheory.Ideal.Quotient.Basic
 --- Needed for Hilbert Basis Theorem
 import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Finiteness.Defs
@@ -239,6 +240,90 @@ def isIrreducible (F : Set (MvPolynomial σ K)) : Prop :=
   (∀ G H : Set (MvPolynomial σ K),
   affineVariety F = affineVariety G ∪ affineVariety H → (affineVariety F = affineVariety G ∨
   affineVariety F = affineVariety H)) ∧ (affineVariety F ≠ ∅)
+
+
+
+
+
+
+-- Chapter 4 §4 Prop 7 ii)
+theorem varietyZariskiUnion [Fintype σ] {F G : Set (MvPolynomial σ K)} :
+  affineVariety F = (affineVariety F ∩ affineVariety G)
+          ∪ zariskiClosure (affineVariety F \ affineVariety G) := by
+  apply Set.Subset.antisymm
+  · have h₀: (affineVariety F) \ (affineVariety G)
+        ⊆ zariskiClosure (affineVariety F \ affineVariety G) := by
+        rw [zariskiClosure]
+        apply setContainedInVariety
+    conv_lhs =>
+      rw [← inter_union_diff (affineVariety F) (affineVariety G)]
+    gcongr
+
+  · apply union_subset
+    · exact inter_subset_left
+    · rw [zariskiClosure]
+      -- apply Prop 1
+      have h₁: (affineVariety F) \ (affineVariety G) ⊆ affineVariety F := by
+        simp
+
+      apply (smallestVariety (affineVariety F \ affineVariety G)).left
+      exact h₁
+
+
+
+-- Chapter 4 §4 Prop 7 iii)
+theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+  zariskiClosure (affineVariety I \ affineVariety J) ≤ MvPolynomial.zeroLocus K (I.colon J) := by
+  have h: I.colon J ≤ MvPolynomial.vanishingIdeal K
+          (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+    intro f hf a ha
+
+    -- a is in V(I), since a is in V(I) \ V(J)
+    have h₁: a ∈ MvPolynomial.zeroLocus K I := by
+      exact mem_of_mem_inter_left ha
+
+    -- therefore, for all g in J, f(a)g(a) = 0
+    have h₂ : ∀ g ∈ J, MvPolynomial.eval a f * MvPolynomial.eval a g = 0 := by
+      intro g hg
+
+      -- disclaimer, hfg and h_eval were written by AI, I was very stuck
+      -- f * g is in I
+      have hfg : f * g ∈ I := by
+        apply hf
+        exact mem_leftCoset f hg
+      -- f (a) * g (a) = 0
+      have h_eval := by
+        apply h₁ (f * g)
+        apply hfg
+
+      rw [map_mul] at h_eval
+      exact h_eval
+
+    -- there exists a g such that g(a) ≠ 0
+    have h₃ : ∃ g ∈ J, MvPolynomial.eval a g ≠ 0 := by
+      apply notInZeroLocus.mp
+      exact notMem_of_mem_diff ha
+
+    -- AI code alert sorry I was very tired
+    -- however, (f a) * (g a) = 0 for all f. therefore, (f a) must equal 0 for all f
+    rcases h₃ with ⟨g, hg, hg_ne_zero⟩
+    have h_mul := h₂ g hg
+    cases mul_eq_zero.mp h_mul with
+    | inl hf_zero =>
+      rw [MvPolynomial.aeval_def]
+      exact hf_zero
+    | inr hg_zero =>
+      exact False.elim (hg_ne_zero hg_zero)
+
+
+
+
+  sorry
+
+
+
+
+
 
 
 end ZariskiTop
