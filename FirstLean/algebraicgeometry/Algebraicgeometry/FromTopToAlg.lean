@@ -48,9 +48,12 @@ theorem productZeroLocus (I J : Ideal (MvPolynomial σ K)) :
     closedUnderUnion]
 
 
-lemma inAffVarUnion {x : σ → K} (F : Set (MvPolynomial σ K)) (f : MvPolynomial σ K)
-  (h : x ∈ affineVariety F) (h' : (MvPolynomial.eval x) f = 0) :
-  x ∈ affineVariety (F ∪ {f}) := by
+lemma inAffVarUnion {x : σ → K} (V: Set (σ → K)) (f : MvPolynomial σ K)
+  (V_var : isAffineVariety V) (h : x ∈ V) (h' : (MvPolynomial.eval x) f = 0) :
+  x ∈ V ∩ affineVariety {f} := by
+  rcases V_var with ⟨F, hF⟩ --- Extract the set V is defined to be the set of zeroes of
+  subst hF
+  rw [closedUnderIntersection] --- V(F) ∩ V({f}) = V(F ∪ {f})
   intro p hp
   rcases hp with inF | isf --- p ∈ F ∪ {f} so is either in F or p = f, either way goes to zero at x
   · apply h
@@ -61,9 +64,9 @@ lemma inAffVarUnion {x : σ → K} (F : Set (MvPolynomial σ K)) (f : MvPolynomi
     exact h'
 
 
-lemma varietyEqualUnion (F : Set (MvPolynomial σ K)) (f g : MvPolynomial σ K)
-  (h : f * g ∈ MvPolynomial.vanishingIdeal K (affineVariety F)) :
-  affineVariety F = (affineVariety (F ∪ {f})) ∪ (affineVariety (F ∪ {g})) := by
+lemma varietyEqualUnion {V : Set (σ → K)} {f g : MvPolynomial σ K}
+  (V_var : isAffineVariety V) (h : f * g ∈ MvPolynomial.vanishingIdeal K V) :
+  V = (V ∩ affineVariety {f}) ∪ (V ∩ affineVariety {g}) := by
   --- (f * g)(x) = 0 for x ∈ V(F) so must have f(x) = 0 ∨ g(x) = 0
   simp only [MvPolynomial.mem_vanishingIdeal_iff, MvPolynomial.aeval_eq_eval, map_mul, mul_eq_zero] at h
   ext x
@@ -72,34 +75,32 @@ lemma varietyEqualUnion (F : Set (MvPolynomial σ K)) (f g : MvPolynomial σ K)
     specialize h x h'
     rcases h with f_zero | g_zero --- Either f(x) = 0 or g(x) = 0 so will split by cases
     · left
-      exact inAffVarUnion F f h' f_zero
+      exact inAffVarUnion V f V_var h' f_zero
     · right
-      exact inAffVarUnion F g h' g_zero
+      exact inAffVarUnion V g V_var h' g_zero
   · intro h'
     rcases h' with inFf | inFg
-    · intro p hp --- x ∈ affineVariety (F ∪ {f}) so any function in F will vanish at x
-      apply inFf
-      simp [hp]
-    · intro p hp --- Analogous to above case
-      apply inFg
-      simp [hp]
+    · rw [Set.mem_inter_iff x V (affineVariety {f})] at inFf --- x ∈ V ∩ affineVariety {f} so is clearly in V
+      simp [inFf]
+    · rw [Set.mem_inter_iff x V (affineVariety {g})] at inFg --- Analogous to above
+      simp [inFg]
 
 
 @[simp]
-lemma strictVanishingIdealAntiMono {F G : Set (MvPolynomial σ K)} :
-  affineVariety G < affineVariety F → MvPolynomial.vanishingIdeal K (affineVariety F)
-  < MvPolynomial.vanishingIdeal K (affineVariety G) := by
+lemma strictVanishingIdealAntiMono {V W : Set (σ → K)} {V_var : isAffineVariety V} {W_var : isAffineVariety W} :
+  W < V → MvPolynomial.vanishingIdeal K V
+  < MvPolynomial.vanishingIdeal K W := by
   intro h
-  --- The definition of being a strict subset is that one set is contained in the other and
-  --- the larger set has an element that is not in the smaller one
   simp only [Set.lt_eq_ssubset, Set.ssubset_iff_exists] at h
-  rcases h with ⟨is_subset, y, in_varF, not_in_varG⟩ --- Extract the element in V(F) but not in V(G)
-  simp only [SetLike.lt_iff_le_and_exists] --- Treat the ideal as a set (as proving an inclusion) and use definition already used above
+  rcases h with ⟨is_subset, y, in_V, notin_W⟩
+  simp only [SetLike.lt_iff_le_and_exists]
   constructor
   · apply MvPolynomial.vanishingIdeal_anti_mono
-    exact is_subset --- Use anti-monotonicity to prove the weak inequality
-  · simp at not_in_varG --- y ∉ V(G) so there exists some f ∈ G that doesn't vanish at y
-    rcases not_in_varG with ⟨f, f_inG, f_eval_nonzero⟩ --- Extract this f
+    exact is_subset
+  · rcases V_var with ⟨F, hF⟩; rcases W_var with ⟨G, hG⟩ --- V = V(F), W = V(G) as are affine varieties
+    subst hF hG
+    simp at notin_W --- y ∉ V(G) so there exists some f ∈ G that doesn't vanish at y
+    rcases notin_W with ⟨f, f_inG, f_eval_nonzero⟩ --- Extract this f
     use f --- This will be the f ∈ I(V(G)) but not in I(V(F))
     constructor
     · intro x hx --- f ∈ I(V(G)) as f ∈ G so vanishes on V(G) by definition
@@ -108,21 +109,23 @@ lemma strictVanishingIdealAntiMono {F G : Set (MvPolynomial σ K)} :
     · simp --- To show f ∉ I(V(F)) need to show there is some x ∈ V(F) that f doesn't vanish on
       use y --- y ∈ V(F) but by definition f(y) ≠ 0 so we're done
       constructor
-      · exact in_varF
+      · exact in_V
       · exact f_eval_nonzero
 
 
-lemma equalityVanishingIdeal {F G H : Set (MvPolynomial σ K)}
-  (h : affineVariety F = affineVariety G ∪ affineVariety H) (h' : affineVariety F ≠ affineVariety G)
-  (h'' : (MvPolynomial.vanishingIdeal K (affineVariety F)).IsPrime) :
-  MvPolynomial.vanishingIdeal K (affineVariety F) = MvPolynomial.vanishingIdeal K (affineVariety H) := by
+
+lemma equalityVanishingIdeal {V U W : Set (σ → K)} {V_var : isAffineVariety V}
+  {U_var : isAffineVariety U} {W_var : isAffineVariety W}
+  (h : V = U ∪ W) (h' : V ≠ U) (h'' : (MvPolynomial.vanishingIdeal K V).IsPrime) :
+  MvPolynomial.vanishingIdeal K V = MvPolynomial.vanishingIdeal K W := by
   apply le_antisymm
-  · apply MvPolynomial.vanishingIdeal_anti_mono --- By anti-monotonicity as V(H) ≤ V(F) (as V(F) = V(G) ∪ V(H)) we're done
+  · apply MvPolynomial.vanishingIdeal_anti_mono --- By anti-monotonicity as W ≤ V (as V = U ∪ W) we're done
     simp [h]
   · intro g hg
-    have strict_ineq : MvPolynomial.vanishingIdeal K (affineVariety F) < MvPolynomial.vanishingIdeal K (affineVariety G) := by
-      apply strictVanishingIdealAntiMono --- Just need to show V(G) < V(F) using the anti-monotonicity result
-      apply Set.ssubset_iff_subset_ne.2 --- This strict inequality results from V(G) ≤ V(F) by the union, and V(F) ≠ V(G) by another hypothesis
+    have strict_ineq : MvPolynomial.vanishingIdeal K V < MvPolynomial.vanishingIdeal K U := by
+      apply strictVanishingIdealAntiMono (V_var := V_var) (W_var := U_var)
+      simp only [lt_eq_ssubset]
+      rw [Set.ssubset_iff_subset_ne]
       constructor
       · simp [h]
       · symm at h'
@@ -130,26 +133,26 @@ lemma equalityVanishingIdeal {F G H : Set (MvPolynomial σ K)}
     --- An equivalent definition for one set (here ideals are treated as sets) being included in another is that
     --- there exists an element in one but not the other and we have a weak inequality between the sets
     rw [SetLike.lt_iff_le_and_exists] at strict_ineq
-    rcases strict_ineq with ⟨is_subset, f, inG, not_inF⟩ --- Extract the function f ∉ I(V(F)) with f ∈ I(V(G))
-    have in_van_ideal_F : (f * g) ∈ MvPolynomial.vanishingIdeal K (affineVariety F) := by
-      intro y hy
-      simp only [MvPolynomial.aeval_eq_eval, map_mul, mul_eq_zero] --- Need to show either f(y) = 0 or g(y) = 0
+    rcases strict_ineq with ⟨is_subset, f, inG, not_inF⟩ --- Extract the function f ∉ I(V) with f ∈ I(U)
+    have in_van_ideal_F : (f * g) ∈ MvPolynomial.vanishingIdeal K V := by
+      intro x hx
+      simp only [MvPolynomial.aeval_eq_eval, map_mul, mul_eq_zero] --- Need to show either f(x) = 0 or g(x) = 0
       rw [MvPolynomial.mem_vanishingIdeal_iff] at hg
       rw [MvPolynomial.mem_vanishingIdeal_iff] at inG
-      rw [h] at hy --- y ∈ V(G) ∪ V(H)
-      rcases hy with a | b --- Either y ∈ V(G) or y ∈ V(H)
-      · left --- Either way product will vanish as either f or g will vanish at y
+      rw [h] at hx --- x ∈ U ∪ W
+      rcases hx with a | b --- Either x ∈ U or x ∈ W
+      · left --- Either way product will vanish as either f or g will vanish at x
         apply inG
         exact a
       · right
         apply hg
         exact b
-    have prime : f ∈ MvPolynomial.vanishingIdeal K (affineVariety F) ∨ g ∈ MvPolynomial.vanishingIdeal K (affineVariety F) := by
-      rw [Ideal.isPrime_iff] at h'' --- Apply definition of prime ideal to get that either f or g is in I(V(F))
-      rcases h'' with ⟨not_top, product⟩ --- Get I(V(F)) ≠ ⊤ and the either f or g is in I(V(F)) which is what we really want
+    have prime : f ∈ MvPolynomial.vanishingIdeal K V ∨ g ∈ MvPolynomial.vanishingIdeal K V := by
+      rw [Ideal.isPrime_iff] at h'' --- Apply definition of prime ideal to get that either f or g is in I(V)
+      rcases h'' with ⟨not_top, product⟩ --- Get I(V) ≠ ⊤ and that either f or g is in I(V) which is what we really want
       apply product
       exact in_van_ideal_F
-    simp only [not_inF, false_or] at prime --- Cannot have f ∈ I(V(F)) as f is chosen such that f ∉ I(V(F))
+    simp only [not_inF, false_or] at prime --- Cannot have f ∈ I(V) as f is chosen such that f ∉ I(V)
     exact prime
 
 
@@ -176,41 +179,49 @@ lemma vanishingIdealNotTopIff {S : Set (σ → K)} :
     exact hx
 
 
---- How to include non-emptiness of V(F) as this is required for I(V(F)) to be proper
-theorem irreduciblePrimeIdeal (F : Set (MvPolynomial σ K)):
-  isIrreducible F ↔ (MvPolynomial.vanishingIdeal K (affineVariety F)).IsPrime := by
+lemma interIsAffine {V : Set (σ → K)} {f : MvPolynomial σ K} (V_var : isAffineVariety V) :
+  isAffineVariety (V ∩ affineVariety {f}) := by
+  rcases V_var with ⟨F, hF⟩ --- Get the set V is defined on
+  subst hF
+  use F ∪ {f} --- This the right set to use by an earlier proposition
+  exact closedUnderIntersection F {f}
+
+
+theorem irreduciblePrimeIdeal (V : Set (σ → K)) (V_var : isAffineVariety V):
+  isIrreducible V ↔ (MvPolynomial.vanishingIdeal K V).IsPrime := by
   constructor
   · intro h
     rw [Ideal.isPrime_iff]
     constructor
-    · apply vanishingIdealNotTopIff.mpr --- Need to show I(V(F)) is proper in this part so need V(F) ≠ ∅
-      exact h.2
+    · apply vanishingIdealNotTopIff.mpr --- Need to show I(V) is proper in this part so need V ≠ ∅
+      exact h.2.2
     · intro f g hfg
       --- This is the right union to apply irreducibility to
-      --- Have either of these equalities as V(F) equal to the union of these varieties so can use irreducibility
-      have eq_union : affineVariety F = affineVariety (F ∪ {f}) ∨ affineVariety F = affineVariety (F ∪ {g}) := by
-        apply h.1
-        exact varietyEqualUnion F f g hfg
-      rcases eq_union with with_f | with_g --- Either V(F) = V(F ∪ {f}) or V(F) = V(F ∪ {g})
+      --- Have either of these equalities as V equal to the union of these varieties so can use irreducibility
+      have : (V = V ∩ affineVariety {f}) ∨ (V = V ∩ affineVariety {g}) := by
+        apply h.2.1 --- Use the union property of irreducibility as V is equal to this union
+        apply interIsAffine V_var --- The intersection is an affine variety as both sets are affine varieties
+        apply interIsAffine V_var
+        apply varietyEqualUnion V_var hfg --- V equal to the union by a previous lemma
+      rcases this with with_f | with_g --- Split on which member of the union V is equal to
       · left
-        intro x hx
-        simp only [with_f, union_singleton, FiniteGenSets.memAffineVariety, mem_insert_iff,
-          forall_eq_or_imp] at hx --- x ∈ V(F) = V(F ∪ {f}) so f vanishes at x as required
-        simp only [MvPolynomial.aeval_eq_eval, hx]
-      · right --- Analogous to the above
-        intro x hx
-        simp only [with_g, union_singleton, FiniteGenSets.memAffineVariety, mem_insert_iff,
-          forall_eq_or_imp] at hx
-        simp only [MvPolynomial.aeval_eq_eval, hx]
+        rw [with_f]
+        simp
+      · right
+        rw [with_g]
+        simp
   · intro h
     constructor
-    · intro G H h' --- Introduce the affine varieties V(F) is equal to a union of
-      by_cases in_affvar_G : affineVariety F = affineVariety G
-      · simp [in_affvar_G] --- We are immediately done if V(F) = V(G)
-      · right --- Want to show V(F) = V(H) as know V(F) ≠ V(G)
-        apply vanishingIdealOneToOne --- Suffices to show I(V(F)) = I(V(H)) as I one-to-one on varieties
-        exact equalityVanishingIdeal h' in_affvar_G h
-      --- Also need to show that V(F) ≠ ∅
+    · exact V_var
+    constructor
+    · intro U W U_var W_var eq_union --- Introduce the affine varieties V is equal to the union of
+      by_cases h' : V = U
+      · simp [h']
+      · push Not at h'
+        right
+        apply vanishingIdealOneToOne V_var W_var --- Suffices to prove the vanishing ideals are equal
+        apply equalityVanishingIdeal eq_union h' h --- Can just use a previous lemma as all hypotheses are satisfied
+        apply V_var; apply U_var; apply W_var
     · rw [Ideal.isPrime_iff] at h
       apply vanishingIdealNotTopIff.mp
       exact h.1
