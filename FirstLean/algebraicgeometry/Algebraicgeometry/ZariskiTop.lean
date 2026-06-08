@@ -36,6 +36,10 @@ theorem notInZeroLocus {x : σ → K} {I : Ideal (MvPolynomial σ K)} :
   exact MvPolynomial.mem_zeroLocus_iff
 
 
+def isAffineVariety (V : Set (σ → K)) : Prop :=
+  ∃ F : Set (MvPolynomial σ K), V = affineVariety F
+
+
 --- This theorem states that affine varieties are closed under intersections and in fact
 --- the intersection of two affine varieties is the affine variety of their union
 theorem closedUnderIntersection (F G : Set (MvPolynomial σ K)) :
@@ -154,16 +158,11 @@ instance affineTopology : TopologicalSpace (σ → K) where
       exact hP''
 
 
---- This is essentially true because of Hilbert's Basis Theorem
-@[simp]
-theorem zeroLocusOfVanishingIsVariety {σ : Type*} [Fintype σ] {S : Set (σ → K)} :
-  ∃ F : Set (MvPolynomial σ K), F.Finite ∧ MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) = affineVariety F := by
-  exact isAffineVariety (MvPolynomial.vanishingIdeal K S)
-
-
---- V(I(V(F))) = V(F)
-theorem zeroLocusOfVanAffineIsAffine (F : Set (MvPolynomial σ K)) :
-  MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K (affineVariety F)) = affineVariety F := by
+--- V(I(V)) = V where V is an affine variety
+theorem zeroLocusOfVanAffineIsAffine (V : Set (σ → K)) (h : isAffineVariety V) :
+  MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K V) = V := by
+  rcases h with ⟨F, hF⟩
+  subst hF
   apply le_antisymm
   · nth_rw 2 [← zeroLocusOfGenSetIsVariety F]
     apply MvPolynomial.zeroLocus_anti_mono
@@ -175,12 +174,12 @@ theorem zeroLocusOfVanAffineIsAffine (F : Set (MvPolynomial σ K)) :
     exact hx
 
 
---- Just apply the fact that V(I(V(F))) = V(F)
-theorem vanishingIdealOneToOne {F G : Set (MvPolynomial σ K)} :
-  MvPolynomial.vanishingIdeal K (affineVariety F) = MvPolynomial.vanishingIdeal K (affineVariety G)
-   → affineVariety F = affineVariety G := by
+--- Just apply the fact that V(I(V)) = V
+theorem vanishingIdealOneToOne {V W : Set (σ → K)} (V_var : isAffineVariety V) (W_var : isAffineVariety W) :
+  MvPolynomial.vanishingIdeal K (V) = MvPolynomial.vanishingIdeal K (W)
+   → V = W := by
   intro h
-  rw [← zeroLocusOfVanAffineIsAffine F, ← zeroLocusOfVanAffineIsAffine G]
+  rw [← zeroLocusOfVanAffineIsAffine V V_var, ← zeroLocusOfVanAffineIsAffine W W_var]
   congr
 
 
@@ -194,18 +193,19 @@ theorem setContainedInVariety (S : Set (σ → K)) :
 --- V(I(S)) is the smallest variety containing S
 --- Need to include the fact that S ≤ V(I(S)) and that any other affine variety containing S contains V(I(S))
 theorem smallestVariety {σ : Type*} [Fintype σ] (S : Set (σ → K)) :
-  (∀ F : Set (MvPolynomial σ  K), S ⊆ affineVariety F → MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) ⊆ affineVariety F) ∧
-  (S ⊆ MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S)) ∧
-  (∃ G : Set (MvPolynomial σ K), MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) = affineVariety G) := by
+  (∀ V : Set (σ → K), isAffineVariety V → S ≤ V → MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S) ≤ V) ∧
+  (S ≤ MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S)) ∧
+  (isAffineVariety (MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S))) := by
   constructor
-  · intro F s_contain
-    rw [← zeroLocusOfVanAffineIsAffine F] --- V(I(V(F))) = F where V(F) is affine variety on F not zero locus
+  · intro V is_aff S_subset
+    rw [← zeroLocusOfVanAffineIsAffine V] --- V(I(V)) = V where V is affine variety
     apply MvPolynomial.zeroLocus_anti_mono
     apply MvPolynomial.vanishingIdeal_anti_mono
-    exact s_contain
+    apply S_subset
+    exact is_aff
   · constructor
     · exact setContainedInVariety S
-    · rcases isAffineVariety (σ := σ) (I := (MvPolynomial.vanishingIdeal K S)) with ⟨F, finite, eq⟩
+    · rcases idealGivesVariety (σ := σ) (I := (MvPolynomial.vanishingIdeal K S)) with ⟨F, finite, eq⟩
       use F
 
 
@@ -214,14 +214,73 @@ def zariskiClosure (S : Set (σ → K)) : Set (σ → K) :=
   MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K S)
 
 
-def zariskiDense (F : Set (MvPolynomial σ K)) (S : Set (σ → K)) : Prop :=
-  (S ≤ affineVariety F) ∧ (zariskiClosure S = affineVariety F)
+def zariskiDense {V : Set (σ → K)} (S : Set (σ → K)) (h : isAffineVariety V) : Prop :=
+  (S ≤ V) ∧ (zariskiClosure S = V)
 
 
-def isIrreducible (F : Set (MvPolynomial σ K)) : Prop :=
-  (∀ G H : Set (MvPolynomial σ K),
-  affineVariety F = affineVariety G ∪ affineVariety H → (affineVariety F = affineVariety G ∨
-  affineVariety F = affineVariety H)) ∧ (affineVariety F ≠ ∅)
+
+def isIrreducible (V : Set (σ → K)): Prop :=
+  (isAffineVariety V) ∧ (∀ U W : Set (σ → K), isAffineVariety U → isAffineVariety W →
+  V = U ∪ W → (V = U ∨ V = W)) ∧ (V ≠ ∅)
+
+
+
+theorem varietyZariskiUnion [Fintype σ] {V W : Set (σ → K)} {V_var : isAffineVariety V}
+  {W_var : isAffineVariety W} :
+  V = (V ∩ W) ∪ zariskiClosure (V \ W) := by
+  apply Set.Subset.antisymm
+  · have h₀ : V \ W ≤ zariskiClosure (V \ W) := by
+        rw [zariskiClosure]
+        apply setContainedInVariety
+    conv_lhs =>
+      rw [← inter_union_diff V W]
+    gcongr
+    exact h₀
+  · apply union_subset
+    · exact inter_subset_left
+    · rw [zariskiClosure]
+      -- apply Prop 1
+      have h₁: V \ W ⊆ V := by
+        simp
+      apply (smallestVariety (V \ W)).left
+      apply V_var
+      apply h₁
+
+
+lemma colonInVanIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+  I.colon J ≤ MvPolynomial.vanishingIdeal K (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+  intro f hf a ha
+
+  -- a is in V(I), since a is in V(I) \ V(J)
+  rw [Set.mem_diff] at ha
+
+  -- therefore, for all g in J, f(a)g(a) = 0
+  have h' : ∀ g ∈ J, ((MvPolynomial.eval a) f) * ((MvPolynomial.eval a) g) = 0 := by
+    intro g hg
+    rw [← map_mul]
+    apply ha.1
+    rw [Submodule.mem_colon] at hf
+    apply hf
+    exact hg
+
+  -- there exists a g such that g(a) ≠ 0
+  simp only [MvPolynomial.mem_zeroLocus_iff, MvPolynomial.aeval_eq_eval] at ha
+  push Not at ha
+  rcases ha.2 with ⟨g', inJ, non_zero⟩ -- Extract this g'
+
+  -- So as must have (fg)(a) = 0, ∀ g ∈ J must have f(a) = 0 as one of the g ∈ J doesn't vanish at a
+  simp only [mul_eq_zero] at h'
+  specialize h' g' inJ -- Apply h₂ to this g' to get that (g')(a) = 0 or f(a) = 0
+  simp only [non_zero, or_false] at h' -- Must have f(a) = 0
+  exact h'
+
+
+theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+  zariskiClosure (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) ≤
+  MvPolynomial.zeroLocus K (I.colon J) := by
+  rw [zariskiClosure]
+  apply MvPolynomial.zeroLocus_anti_mono
+  exact colonInVanIdeal
 
 
 end ZariskiTop

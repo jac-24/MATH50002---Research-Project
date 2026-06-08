@@ -15,8 +15,8 @@ variable {K : Type*} [Field K]
 variable {σ : Type*}
 
 
-def affineVariety (F : Set (MvPolynomial σ K)): Set (σ → K) :=
-    {x : σ → K | ∀ p ∈ F, (MvPolynomial.eval x) p = 0}
+def affineVariety (F : Set (MvPolynomial σ K)) : Set (σ → K) :=
+  {x : σ → K | ∀ p ∈ F, (MvPolynomial.eval x) p = 0}
 
 
 @[simp]
@@ -61,7 +61,7 @@ theorem zeroLocusOfGenSetIsVariety (F : Set (MvPolynomial σ K)) :
     exact hp
 
 
-theorem isAffineVariety {σ : Type*} [Fintype σ] (I : Ideal (MvPolynomial σ K)):
+theorem idealGivesVariety {σ : Type*} [Fintype σ] (I : Ideal (MvPolynomial σ K)):
   ∃ F : Set (MvPolynomial σ K), F.Finite ∧ MvPolynomial.zeroLocus K I = affineVariety F := by
   rcases hasFiniteGenSet (I) with ⟨F, fin, span⟩ --- Extract the finite basis
   use F
@@ -75,7 +75,7 @@ theorem isAffineVariety {σ : Type*} [Fintype σ] (I : Ideal (MvPolynomial σ K)
 theorem onlyFiniteSetsNeeded {σ : Type*} [Fintype σ] (F : Set (MvPolynomial σ K)) :
   ∃ G : Set (MvPolynomial σ K), G.Finite ∧ affineVariety F = affineVariety G := by
   rw [← zeroLocusOfGenSetIsVariety F]
-  rcases isAffineVariety (Ideal.span F) with ⟨G, fin, h⟩
+  rcases idealGivesVariety (Ideal.span F) with ⟨G, fin, h⟩
   use G
 
 
