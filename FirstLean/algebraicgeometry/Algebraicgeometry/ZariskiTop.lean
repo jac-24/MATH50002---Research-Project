@@ -224,6 +224,65 @@ def isIrreducible (V : Set (σ → K)): Prop :=
   V = U ∪ W → (V = U ∨ V = W)) ∧ (V ≠ ∅)
 
 
+
+theorem varietyZariskiUnion [Fintype σ] {V W : Set (σ → K)} {V_var : isAffineVariety V}
+  {W_var : isAffineVariety W} :
+  V = (V ∩ W) ∪ zariskiClosure (V \ W) := by
+  apply Set.Subset.antisymm
+  · have h₀ : V \ W ≤ zariskiClosure (V \ W) := by
+        rw [zariskiClosure]
+        apply setContainedInVariety
+    conv_lhs =>
+      rw [← inter_union_diff V W]
+    gcongr
+    exact h₀
+  · apply union_subset
+    · exact inter_subset_left
+    · rw [zariskiClosure]
+      -- apply Prop 1
+      have h₁: V \ W ⊆ V := by
+        simp
+      apply (smallestVariety (V \ W)).left
+      apply V_var
+      apply h₁
+
+
+lemma colonInVanIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+  I.colon J ≤ MvPolynomial.vanishingIdeal K (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+  intro f hf a ha
+
+  -- a is in V(I), since a is in V(I) \ V(J)
+  rw [Set.mem_diff] at ha
+
+  -- therefore, for all g in J, f(a)g(a) = 0
+  have h' : ∀ g ∈ J, ((MvPolynomial.eval a) f) * ((MvPolynomial.eval a) g) = 0 := by
+    intro g hg
+    rw [← map_mul]
+    apply ha.1
+    rw [Submodule.mem_colon] at hf
+    apply hf
+    exact hg
+
+  -- there exists a g such that g(a) ≠ 0
+  simp only [MvPolynomial.mem_zeroLocus_iff, MvPolynomial.aeval_eq_eval] at ha
+  push Not at ha
+  rcases ha.2 with ⟨g', inJ, non_zero⟩ -- Extract this g'
+
+  -- So as must have (fg)(a) = 0, ∀ g ∈ J must have f(a) = 0 as one of the g ∈ J doesn't vanish at a
+  simp only [mul_eq_zero] at h'
+  specialize h' g' inJ -- Apply h₂ to this g' to get that (g')(a) = 0 or f(a) = 0
+  simp only [non_zero, or_false] at h' -- Must have f(a) = 0
+  exact h'
+
+
+theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+  zariskiClosure (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) ≤
+  MvPolynomial.zeroLocus K (I.colon J) := by
+  rw [zariskiClosure]
+  apply MvPolynomial.zeroLocus_anti_mono
+  exact colonInVanIdeal
+
+
 end ZariskiTop
 
 
