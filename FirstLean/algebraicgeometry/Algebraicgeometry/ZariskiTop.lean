@@ -300,9 +300,11 @@ theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K
 
 
 
-
-  sorry
-
+  -- gonna double check this too, I wrote that first line with AI
+  change MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K
+          (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J))
+          ≤ MvPolynomial.zeroLocus K (I.colon J)
+  exact MvPolynomial.zeroLocus_anti_mono h
 
 
 
