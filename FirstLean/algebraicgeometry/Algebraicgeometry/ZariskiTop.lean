@@ -5,6 +5,7 @@ import Mathlib.RingTheory.Ideal.Basis
 import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Ideal.Prime
 import Mathlib.RingTheory.Ideal.Quotient.Basic
+import Mathlib.RingTheory.Ideal.Operations
 --- Needed for Hilbert Basis Theorem
 import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Finiteness.Defs
@@ -327,10 +328,52 @@ theorem varietyIsUnionOfVarietySumAndVarietyQuotient [Fintype σ] {I J : Ideal (
 
 
 
+def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K) where
+  carrier := {f : MvPolynomial σ K | ∀ g ∈ J, ∃ N : Nat, (f * g^N) ∈ I} --- The actual set
+  add_mem' := by
+    intro a b ha hb g hg
+    simp at ha hb
+    specialize ha g hg
+    specialize hb g hg
+    rcases ha with ⟨n, hn⟩ --- Get the powers who keep the product in the ideal
+    rcases hb with ⟨m, hm⟩
+    use m + n --- Use the sum
+    rw [add_mul] --- Now rw a bunch of times to get into a nice form
+    nth_rw 1 [add_comm m n]
+    rw [pow_add, pow_add]
+    rw [← mul_assoc, ← mul_assoc]
+    rw [mul_comm]
+    rw [mul_comm (b * g^m) (g^n)]
+    simp [Ideal.add_mem, Ideal.mul_mem_left, hn, hm]
+  zero_mem' := by
+    intro g hg
+    use 0 --- 0 * g ^ 0 ∈ I, ∀ g ∈ I as I an ideal so 0 ∈ I
+    simp only [pow_zero, mul_one, zero_mem]
+  smul_mem' := by --- This is because of associativity of multiplication and the fact that I is an ideal
+    intro c a ha g hg
+    simp at ha
+    specialize ha g hg
+    rcases ha with ⟨n, hn⟩
+    use n
+    simp only [smul_eq_mul]
+    rw [mul_assoc]
+    simp [Ideal.mul_mem_left, hn]
 
+--theorem powerContainmentOfRadical [Fintype σ] {I : Ideal (MvPolynomial σ)} {F : Set (MvPolynomial σ)} {M : ℕ}
+--  (Ideal.span F) ^ (F.length * M) ≤ Ideal.span (F.map (·^M)) := by
 
-
-
+theorem varietyIsUnionOfVaretySumAndVarietySaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
+  MvPolynomial.zeroLocus K I = (MvPolynomial.zeroLocus K (I + J))
+  ∪ (MvPolynomial.zeroLocus K (saturationIdeal I J)) := by
+  have h₀: MvPolynomial.zeroLocus K (I.colon J) ⊆ MvPolynomial.zeroLocus K (saturationIdeal I J) := by
+    sorry
+  have h₁: MvPolynomial.zeroLocus K (saturationIdeal I J) ⊆ MvPolynomial.zeroLocus K (I) := by
+    sorry
+  apply Set.Subset.antisymm
+  ·
+    sorry
+  ·
+    sorry
 
 
 --- Some alternative formalizations
