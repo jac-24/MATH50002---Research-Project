@@ -40,26 +40,6 @@ def isAffineVariety (V : Set (σ → K)) : Prop :=
   ∃ F : Set (MvPolynomial σ K), V = affineVariety F
 
 
---- This theorem states that affine varieties are closed under intersections and in fact
---- the intersection of two affine varieties is the affine variety of their union
-theorem closedUnderIntersection (F G : Set (MvPolynomial σ K)) :
-    affineVariety F ∩ affineVariety G = affineVariety (F ∪ G) := by
-    ext x --- Introduces the x for the subset inclusion
-    constructor --- Splits the goal
-    · intro h --- Introduces the hypothesis that x is in the LHS of the inclusion
-      rcases h with ⟨h₀, h₁⟩ --- Gives us that either x is is the first AV or the second (or both)
-      intro p hp --- Introduces the p in the union of the sets of functions that we need to evaluate to 0 at x
-      rcases hp with a | b --- Gives us that either p ∈ Func₀ or p ∈ Func₁
-      · apply h₀; exact a
-      · apply h₁; exact b
-    · intro h --- Introduces the hypothesis that x is in the RHS of the inclusion
-      constructor --- Need to prove x is in the intersection so this splits the goal
-      · intro p hp --- Introduces the function we want to evaluate to 0
-        apply h; exact Set.mem_union_left G hp --- Have x in the affine variety of the union so just need to prove p is in the union
-      · intro p hp --- Analogous to above
-        apply h; exact Set.mem_union_right F hp
-
-
 theorem closedUnderUnion (F G : Set (MvPolynomial σ K)) :
   affineVariety F ∪ affineVariety G = affineVariety (F * G) := by
   ext x --- Introduces the x for dual inclusion
@@ -138,9 +118,7 @@ instance affineTopology : TopologicalSpace (σ → K) where
       obtain ⟨P', hP'⟩ := hS t' t'S
       have x_in_compl : x ∈ t'ᶜ := by
         rw [← hP']
-        rw [affineVariety, mem_setOf_eq]
         intro f hf
-        rw [affineVariety] at LHS
         apply LHS
         exact ⟨P', ⟨t', t'S, hP'⟩, hf⟩
       apply x_in_compl
@@ -281,6 +259,38 @@ theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K
   rw [zariskiClosure]
   apply MvPolynomial.zeroLocus_anti_mono
   exact colonInVanIdeal
+
+
+def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K) where
+  carrier := {f : MvPolynomial σ K | ∀ g ∈ J, ∃ N : Nat, (f * g^N) ∈ I} --- The actual set
+  add_mem' := by
+    intro a b ha hb g hg
+    simp at ha hb
+    specialize ha g hg
+    specialize hb g hg
+    rcases ha with ⟨n, hn⟩ --- Get the powers who keep the product in the ideal
+    rcases hb with ⟨m, hm⟩
+    use m + n --- Use the sum
+    rw [add_mul] --- Now rw a bunch of times to get into a nice form
+    nth_rw 1 [add_comm m n]
+    rw [pow_add, pow_add]
+    rw [← mul_assoc, ← mul_assoc]
+    rw [mul_comm]
+    rw [mul_comm (b * g^m) (g^n)]
+    simp [Ideal.add_mem, Ideal.mul_mem_left, hn, hm]
+  zero_mem' := by
+    intro g hg
+    use 0 --- 0 * g ^ 0 ∈ I, ∀ g ∈ I as I an ideal so 0 ∈ I
+    simp only [pow_zero, mul_one, zero_mem]
+  smul_mem' := by --- This is because of associativity of multiplication and the fact that I is an ideal
+    intro c a ha g hg
+    simp at ha
+    specialize ha g hg
+    rcases ha with ⟨n, hn⟩
+    use n
+    simp only [smul_eq_mul]
+    rw [mul_assoc]
+    simp [Ideal.mul_mem_left, hn]
 
 
 end ZariskiTop
