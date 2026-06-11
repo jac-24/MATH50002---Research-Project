@@ -262,7 +262,6 @@ theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K
   exact colonInVanIdeal
 
 
-<<<<<<< HEAD
 -- copied from FromTopToAlg.lean
 
 theorem idealGeneratesItself (I : Ideal (MvPolynomial σ K)) :
