@@ -44,7 +44,7 @@ theorem closedUnderIntersection (F G : Set (MvPolynomial σ K)) :
         apply h; exact Set.mem_union_left G hp --- Have x in the affine variety of the union so just need to prove p is in the union
       · intro p hp --- Analogous to above
         apply h; exact Set.mem_union_right F hp
-        
+
 
 theorem closedUnderArbitraryIntersection (Func : σ → Set (MvPolynomial σ K)) :
   ⋂ i, (affineVariety (Func i)) = affineVariety (⋃ i, Func i) := by
@@ -129,16 +129,6 @@ theorem vanishingIdealIntersectionUnion (S T : Set (σ → K)) :
       exact hx
 
 
---- This is true by putting by just rewriting some of theorems have already proved
-theorem zariskiClosureUnion (S T : Set (σ → K)) :
-  zariskiClosure (S ∪ T) = zariskiClosure S ∪ zariskiClosure T := by
-  rw [zariskiClosure, zariskiClosure, zariskiClosure]
-  rw [← intersectionInsideGivesUnion]
-  congr
-  symm
-  exact vanishingIdealIntersectionUnion S T
-
-
 theorem intersectionInsideGivesUnion (I J : Ideal (MvPolynomial σ K)) :
   MvPolynomial.zeroLocus K (I ⊓ J) = MvPolynomial.zeroLocus K I ∪ MvPolynomial.zeroLocus K J := by
   ext x
@@ -160,3 +150,13 @@ theorem intersectionInsideGivesUnion (I J : Ideal (MvPolynomial σ K)) :
     · rw [MvPolynomial.mem_zeroLocus_iff] at inJ
       apply inJ
       exact p_inJ
+
+
+--- This is true by putting by just rewriting some of theorems have already proved
+theorem zariskiClosureUnion (S T : Set (σ → K)) :
+  zariskiClosure (S ∪ T) = zariskiClosure S ∪ zariskiClosure T := by
+  rw [zariskiClosure, zariskiClosure, zariskiClosure]
+  rw [← intersectionInsideGivesUnion]
+  congr
+  symm
+  exact vanishingIdealIntersectionUnion S T
