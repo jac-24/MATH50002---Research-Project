@@ -310,7 +310,6 @@ theorem varietyIsUnionOfVarietySumAndVarietyQuotient [Fintype σ] {I J : Ideal (
 
 
 
-=======
 def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K) where
   carrier := {f : MvPolynomial σ K | ∀ g ∈ J, ∃ N : Nat, (f * g^N) ∈ I} --- The actual set
   add_mem' := by
@@ -343,8 +342,92 @@ def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K
     simp [Ideal.mul_mem_left, hn]
 
 
+
+theorem saturationSubsetIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+        (saturationIdeal I J) ≤ MvPolynomial.vanishingIdeal K
+       (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+  intro f hf a ha
+
+  rw [Set.mem_diff] at ha
+
+  -- very AI code
+  have h' : ∀ g ∈ J, ∃ n : ℕ, ((MvPolynomial.eval a) f) * ((MvPolynomial.eval a) g^n) = 0 := by
+    intro g hg
+    have h_sat := hf g hg
+    rcases h_sat with ⟨n, hn⟩
+    have h_eval : MvPolynomial.eval a (f * g^n) = 0 := by
+      apply ha.1
+      exact (Submodule.mem_toAddSubgroup I).mp hn
+    use n
+    rw [map_mul, map_pow] at h_eval
+    exact h_eval
+  -- end of very AI code
+
+  -- there exists a g such that g(a) ≠ 0
+  simp only [MvPolynomial.mem_zeroLocus_iff, MvPolynomial.aeval_eq_eval] at ha
+  push Not at ha
+  rcases ha.2 with ⟨g', inJ, non_zero⟩ -- Extract this g'
+
+  -- So as must have (fg)(a) = 0, ∀ g ∈ J must have f(a) = 0 as one of the g ∈ J doesn't vanish at a
+  simp only [mul_eq_zero] at h'
+  specialize h' g' inJ -- Apply h₂ to this g' to get that (g')(a) = 0 or f(a) = 0
+
+  rcases h' with ⟨n, h_or | h_or⟩
+  · exact h_or
+  · exact (non_zero (eq_zero_of_pow_eq_zero h_or)).elim
+
+
+theorem zariskiClosureSubsetOfSaturation [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+  zariskiClosure (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) ≤
+  MvPolynomial.zeroLocus K (saturationIdeal I J) := by
+  rw [zariskiClosure]
+  apply MvPolynomial.zeroLocus_anti_mono
+  exact saturationSubsetIdeal
+
+-- not included in the text yet! add it. And maybe also do I:J subset of I:J∞
+theorem idealLeqSaturation {I J : Ideal (MvPolynomial σ K)} :
+  I ≤ saturationIdeal I J := by
+  intro f hf g hg
+  use 1
+  simp only [pow_one]
+  exact Ideal.IsTwoSided.mul_mem_of_left g hf
+
+theorem varietyIsUnionOfVaretySumAndVarietySaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
+  MvPolynomial.zeroLocus K I = (MvPolynomial.zeroLocus K (I + J))
+  ∪ (MvPolynomial.zeroLocus K (saturationIdeal I J)) := by
+
+  have h₀: MvPolynomial.zeroLocus K I = (MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J)
+          ∪ zariskiClosure (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+    apply varietyZariskiUnion
+    use I; rfl
+    use J; rfl
+
+  apply Set.Subset.antisymm
+  · rw [h₀]
+    rw [← sumZeroLocus]
+    gcongr
+    exact zariskiClosureSubsetOfSaturation
+  · have h₁: MvPolynomial.zeroLocus K (I + J) ⊆ MvPolynomial.zeroLocus K I := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact le_sup_left
+    have h₂: MvPolynomial.zeroLocus K (saturationIdeal I J) ⊆ MvPolynomial.zeroLocus K I := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact idealLeqSaturation
+    exact union_subset h₁ h₂
+
+
+
+
+--theorem quotientIsSubsetOfSaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
+--      MvPolynomial.zeroLocus K (I.colon J) ⊆
+--      MvPolynomial.zeroLocus K (saturationIdeal I J) := by
+--  have h₀: saturationIdeal I J ≥ I := by
+
+
+
+
+
 end ZariskiTop
->>>>>>> a53a3c4662c65e6e5f491f9a7db4efc1f253a5ad
 
 
 --- Some alternative formalizations
