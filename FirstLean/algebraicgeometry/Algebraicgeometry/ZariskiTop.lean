@@ -362,6 +362,16 @@ def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K
 --theorem powerContainmentOfRadical [Fintype σ] {I : Ideal (MvPolynomial σ)} {F : Set (MvPolynomial σ)} {M : ℕ}
 --  (Ideal.span F) ^ (F.length * M) ≤ Ideal.span (F.map (·^M)) := by
 
+
+theorem quotientIsSubsetOfSaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
+      MvPolynomial.zeroLocus K (I.colon J) ⊆
+      MvPolynomial.zeroLocus K (saturationIdeal I J) := by
+
+
+  sorry
+
+
+
 theorem varietyIsUnionOfVaretySumAndVarietySaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
   MvPolynomial.zeroLocus K I = (MvPolynomial.zeroLocus K (I + J))
   ∪ (MvPolynomial.zeroLocus K (saturationIdeal I J)) := by
