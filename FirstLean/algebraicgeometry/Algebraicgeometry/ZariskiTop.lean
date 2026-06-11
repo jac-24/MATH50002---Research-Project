@@ -4,6 +4,7 @@ import Mathlib.RingTheory.Ideal.Basic
 import Mathlib.RingTheory.Ideal.Basis
 import Mathlib.RingTheory.Ideal.Span
 import Mathlib.RingTheory.Ideal.Prime
+import Mathlib.RingTheory.Ideal.Quotient.Basic
 --- Needed for Hilbert Basis Theorem
 import Mathlib.RingTheory.Noetherian.Defs
 import Mathlib.RingTheory.Finiteness.Defs
@@ -217,7 +218,7 @@ theorem varietyZariskiUnion [Fintype σ] {V W : Set (σ → K)} {V_var : isAffin
   · apply union_subset
     · exact inter_subset_left
     · rw [zariskiClosure]
-      -- apply Prop 1
+      -- apply smallest variety proposition
       have h₁: V \ W ⊆ V := by
         simp
       apply (smallestVariety (V \ W)).left
@@ -225,7 +226,7 @@ theorem varietyZariskiUnion [Fintype σ] {V W : Set (σ → K)} {V_var : isAffin
       apply h₁
 
 
-lemma colonInVanIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+theorem colonInVanIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
   I.colon J ≤ MvPolynomial.vanishingIdeal K (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
   intro f hf a ha
 
@@ -261,6 +262,53 @@ theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K
   exact colonInVanIdeal
 
 
+-- copied from FromTopToAlg.lean
+
+theorem idealGeneratesItself (I : Ideal (MvPolynomial σ K)) :
+  Ideal.span I = I := by
+  simp only [Submodule.span_coe_eq_restrictScalars, Submodule.restrictScalars_self]
+
+
+theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
+  MvPolynomial.zeroLocus K (I + J) = MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J := by
+  rw [Submodule.add_eq_sup] --- I + J = I ⊔ J in Lean
+  nth_rw 1 [← idealGeneratesItself I, ← idealGeneratesItself J] --- Replace all instances of I and J by <I> and <J>
+  rw [← Ideal.span_union]
+  rw [zeroLocusOfGenSetIsVariety]
+  symm
+  apply closedUnderIntersection
+
+
+
+
+
+theorem varietyIsUnionOfVarietySumAndVarietyQuotient [Fintype σ] {I J : Ideal (MvPolynomial σ K)}:
+        MvPolynomial.zeroLocus K I =
+        (MvPolynomial.zeroLocus K (I + J)) ∪ MvPolynomial.zeroLocus K (I.colon J) := by
+  apply Set.Subset.antisymm
+  · have h₀: MvPolynomial.zeroLocus K I = (MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J)
+            ∪ zariskiClosure (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+      apply varietyZariskiUnion
+      use I; rfl
+      use J; rfl
+    rw [h₀]
+    rw [← sumZeroLocus]
+    gcongr
+    apply zariskiClosureSubsetOfIdeal
+  · have h₁: MvPolynomial.zeroLocus K (I + J) ⊆ MvPolynomial.zeroLocus K I := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact le_sup_left
+    have h₂: MvPolynomial.zeroLocus K (I.colon J) ⊆ MvPolynomial.zeroLocus K I := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact Ideal.le_colon
+    exact union_subset h₁ h₂
+
+
+
+
+
+
+
 def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K) where
   carrier := {f : MvPolynomial σ K | ∀ g ∈ J, ∃ N : Nat, (f * g^N) ∈ I} --- The actual set
   add_mem' := by
@@ -291,6 +339,91 @@ def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K
     simp only [smul_eq_mul]
     rw [mul_assoc]
     simp [Ideal.mul_mem_left, hn]
+
+
+
+theorem saturationSubsetIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+        (saturationIdeal I J) ≤ MvPolynomial.vanishingIdeal K
+       (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+  intro f hf a ha
+
+  rw [Set.mem_diff] at ha
+
+  -- very AI code
+  have h' : ∀ g ∈ J, ∃ n : ℕ, ((MvPolynomial.eval a) f) * ((MvPolynomial.eval a) g^n) = 0 := by
+    intro g hg
+    have h_sat := hf g hg
+    rcases h_sat with ⟨n, hn⟩
+    have h_eval : MvPolynomial.eval a (f * g^n) = 0 := by
+      apply ha.1
+      exact (Submodule.mem_toAddSubgroup I).mp hn
+    use n
+    rw [map_mul, map_pow] at h_eval
+    exact h_eval
+  -- end of very AI code
+
+  -- there exists a g such that g(a) ≠ 0
+  simp only [MvPolynomial.mem_zeroLocus_iff, MvPolynomial.aeval_eq_eval] at ha
+  push Not at ha
+  rcases ha.2 with ⟨g', inJ, non_zero⟩ -- Extract this g'
+
+  -- So as must have (fg)(a) = 0, ∀ g ∈ J must have f(a) = 0 as one of the g ∈ J doesn't vanish at a
+  simp only [mul_eq_zero] at h'
+  specialize h' g' inJ -- Apply h₂ to this g' to get that (g')(a) = 0 or f(a) = 0
+
+  rcases h' with ⟨n, h_or | h_or⟩
+  · exact h_or
+  · exact (non_zero (eq_zero_of_pow_eq_zero h_or)).elim
+
+
+theorem zariskiClosureSubsetOfSaturation [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+  zariskiClosure (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) ≤
+  MvPolynomial.zeroLocus K (saturationIdeal I J) := by
+  rw [zariskiClosure]
+  apply MvPolynomial.zeroLocus_anti_mono
+  exact saturationSubsetIdeal
+
+-- not included in the text yet! add it. And maybe also do I:J subset of I:J∞
+theorem idealLeqSaturation {I J : Ideal (MvPolynomial σ K)} :
+  I ≤ saturationIdeal I J := by
+  intro f hf g hg
+  use 1
+  simp only [pow_one]
+  exact Ideal.IsTwoSided.mul_mem_of_left g hf
+
+theorem varietyIsUnionOfVaretySumAndVarietySaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
+  MvPolynomial.zeroLocus K I = (MvPolynomial.zeroLocus K (I + J))
+  ∪ (MvPolynomial.zeroLocus K (saturationIdeal I J)) := by
+
+  have h₀: MvPolynomial.zeroLocus K I = (MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J)
+          ∪ zariskiClosure (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+    apply varietyZariskiUnion
+    use I; rfl
+    use J; rfl
+
+  apply Set.Subset.antisymm
+  · rw [h₀]
+    rw [← sumZeroLocus]
+    gcongr
+    exact zariskiClosureSubsetOfSaturation
+  · have h₁: MvPolynomial.zeroLocus K (I + J) ⊆ MvPolynomial.zeroLocus K I := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact le_sup_left
+    have h₂: MvPolynomial.zeroLocus K (saturationIdeal I J) ⊆ MvPolynomial.zeroLocus K I := by
+      apply MvPolynomial.zeroLocus_anti_mono
+      exact idealLeqSaturation
+    exact union_subset h₁ h₂
+
+
+
+
+--theorem quotientIsSubsetOfSaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
+--      MvPolynomial.zeroLocus K (I.colon J) ⊆
+--      MvPolynomial.zeroLocus K (saturationIdeal I J) := by
+--  have h₀: saturationIdeal I J ≥ I := by
+
+
+
 
 
 end ZariskiTop
@@ -407,3 +540,84 @@ end ZariskiTop
 --   · intro h p hp
 --     apply hp
 --     exact h
+
+---- Chapter 4 §4 Prop 7 ii)
+--theorem varietyZariskiUnion [Fintype σ] {F G : Set (MvPolynomial σ K)} :
+--  affineVariety F = (affineVariety F ∩ affineVariety G)
+--          ∪ zariskiClosure (affineVariety F \ affineVariety G) := by
+--  apply Set.Subset.antisymm
+--  · have h₀: (affineVariety F) \ (affineVariety G)
+--        ⊆ zariskiClosure (affineVariety F \ affineVariety G) := by
+--        rw [zariskiClosure]
+--        apply setContainedInVariety
+--    conv_lhs =>
+--      rw [← inter_union_diff (affineVariety F) (affineVariety G)]
+--    gcongr
+--
+--  · apply union_subset
+--    · exact inter_subset_left
+--    · rw [zariskiClosure]
+--      -- apply Prop 1
+--      have h₁: (affineVariety F) \ (affineVariety G) ⊆ affineVariety F := by
+--        simp
+--
+--      apply (smallestVariety (affineVariety F \ affineVariety G)).left
+--      exact h₁
+
+---- Chapter 4 §4 Prop 7 iii)
+--theorem zariskiClosureSubsetOfIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
+--  zariskiClosure (affineVariety I \ affineVariety J) ≤ MvPolynomial.zeroLocus K (I.colon J) := by
+--  have h: I.colon J ≤ MvPolynomial.vanishingIdeal K
+--          (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
+--    intro f hf a ha
+--
+--    -- a is in V(I), since a is in V(I) \ V(J)
+--    have h₁: a ∈ MvPolynomial.zeroLocus K I := by
+--      exact mem_of_mem_inter_left ha
+--
+--    -- therefore, for all g in J, f(a)g(a) = 0
+--    have h₂ : ∀ g ∈ J, MvPolynomial.eval a f * MvPolynomial.eval a g = 0 := by
+--      intro g hg
+--
+--      -- disclaimer, hfg and h_eval were written by AI, I was very stuck
+--      -- f * g is in I
+--      have hfg : f * g ∈ I := by
+--        apply hf
+--        exact mem_leftCoset f hg
+--      -- f (a) * g (a) = 0
+--      have h_eval := by
+--        apply h₁ (f * g)
+--        apply hfg
+--
+--      rw [map_mul] at h_eval
+--      exact h_eval
+--
+--    -- there exists a g such that g(a) ≠ 0
+--    have h₃ : ∃ g ∈ J, MvPolynomial.eval a g ≠ 0 := by
+--      apply notInZeroLocus.mp
+--      exact notMem_of_mem_diff ha
+--
+--    -- AI code alert sorry I was very tired
+--    -- however, (f a) * (g a) = 0 for all f. therefore, (f a) must equal 0 for all f
+--    rcases h₃ with ⟨g, hg, hg_ne_zero⟩
+--    have h_mul := h₂ g hg
+--    cases mul_eq_zero.mp h_mul with
+--    | inl hf_zero =>
+--      rw [MvPolynomial.aeval_def]
+--      exact hf_zero
+--    | inr hg_zero =>
+--      exact False.elim (hg_ne_zero hg_zero)
+--
+--
+--  -- gonna double check this too, I wrote that first line with AI
+--  change MvPolynomial.zeroLocus K (MvPolynomial.vanishingIdeal K
+--          (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J))
+--          ≤ MvPolynomial.zeroLocus K (I.colon J)
+--  exact MvPolynomial.zeroLocus_anti_mono h
+--
+--
+--
+--
+--
+--
+--end ZariskiTop
