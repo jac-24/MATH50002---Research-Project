@@ -269,6 +269,26 @@ theorem idealGeneratesItself (I : Ideal (MvPolynomial σ K)) :
   simp only [Submodule.span_coe_eq_restrictScalars, Submodule.restrictScalars_self]
 
 
+--- This theorem states that affine varieties are closed under intersections and in fact
+--- the intersection of two affine varieties is the affine variety of their union
+theorem closedUnderIntersection (F G : Set (MvPolynomial σ K)) :
+    affineVariety F ∩ affineVariety G = affineVariety (F ∪ G) := by
+    ext x --- Introduces the x for the subset inclusion
+    constructor --- Splits the goal
+    · intro h --- Introduces the hypothesis that x is in the LHS of the inclusion
+      rcases h with ⟨h₀, h₁⟩ --- Gives us that either x is is the first AV or the second (or both)
+      intro p hp --- Introduces the p in the union of the sets of functions that we need to evaluate to 0 at x
+      rcases hp with a | b --- Gives us that either p ∈ Func₀ or p ∈ Func₁
+      · apply h₀; exact a
+      · apply h₁; exact b
+    · intro h --- Introduces the hypothesis that x is in the RHS of the inclusion
+      constructor --- Need to prove x is in the intersection so this splits the goal
+      · intro p hp --- Introduces the function we want to evaluate to 0
+        apply h; exact Set.mem_union_left G hp --- Have x in the affine variety of the union so just need to prove p is in the union
+      · intro p hp --- Analogous to above
+        apply h; exact Set.mem_union_right F hp
+
+
 theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
   MvPolynomial.zeroLocus K (I + J) = MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J := by
   rw [Submodule.add_eq_sup] --- I + J = I ⊔ J in Lean

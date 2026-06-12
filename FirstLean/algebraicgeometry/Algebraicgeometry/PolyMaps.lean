@@ -38,15 +38,15 @@ def polynomialMapping (F : τ → (MvPolynomial σ K)) (V : Set (σ → K)) (isV
 
 
 -- because isPolynomialMapping takes φ : K^n → K^m and in Lean K is not the same as (Fin 1) → K
--- I had to create a new function isScalarPolyMap
--- isScalarPolyMap checks if φ : V → K is a polynomial map
-def isScalarPolyMap (V : Set (σ → K)) (φ : V → K) : Prop :=
+-- I had to create a new function isScalarPolynomialMap
+-- isScalarPolynomialMap checks if φ : V → K is a polynomial map
+def isScalarPolynomialMap (V : Set (σ → K)) (φ : V → K) : Prop :=
   ∃ f : MvPolynomial σ K, ∀ x : V, φ x = (MvPolynomial.eval x) f
    ∧ isAffineVariety V
 
 -- Define the coordinate ring k[V] = {φ : V → K | φ is a polynomial map}
-def coordRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V → K) where
-  carrier := { φ : V → K | isScalarPolyMap V φ }
+def coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V → K) where
+  carrier := { φ : V → K | isScalarPolynomialMap V φ }
   add_mem' := by
     sorry
   mul_mem' := by
@@ -69,23 +69,36 @@ def coordRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V → 
     · exact isVar
 
 -- similarly, to define the lemma below I need a version of polynomialMapping from V → K
-def scalarPolyMap (f : MvPolynomial σ K) (V : Set (σ → K)) (isVar : isAffineVariety V) : V → K :=
+def scalarPolynomialMap (f : MvPolynomial σ K) (V : Set (σ → K)) (isVar : isAffineVariety V) : V → K :=
   fun (x : V) => (MvPolynomial.eval x) f
 
 
 -- Two polynomials f,g ∈ K[x1,...,xn] represent the same polynomial map φ : V → K  iff  f - g ∈ I(V)
 -- where I(V) = MvPolynomial.vanishingIdeal V from Mathlib
 ------////////////////////////NEED TO THINK OF A BETTER NAME//////////////////////////-----------------/
-lemma scalarPolyMapEquivalence (f : MvPolynomial σ K) (g : MvPolynomial σ K)
+lemma scalarPolynomialMapEquivalence (f : MvPolynomial σ K) (g : MvPolynomial σ K)
     (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    scalarPolyMap f V = scalarPolyMap g V ↔ (f - g) ∈ MvPolynomial.vanishingIdeal K V  := by
+    scalarPolynomialMap f V = scalarPolynomialMap g V ↔ (f - g) ∈ MvPolynomial.vanishingIdeal K V  := by
   sorry
 
 
-lemma polyMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvPolynomial σ K))
+lemma polynomialMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvPolynomial σ K))
     (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    ∀ t : τ , scalarPolyMap (F t) V = scalarPolyMap (G t) V
+    ∀ t : τ , scalarPolynomialMap (F t) V = scalarPolynomialMap (G t) V
     ↔ (F t - G t) ∈ MvPolynomial.vanishingIdeal K V := by
+  sorry
+
+
+-- Goal: Show that k[V] is isomorphic to k[x1,...,xn]/I(V)
+-- 1) Create map ϕ : k[x1,...,xn] → k[V] defined as f
+-- 2) Show that ϕ is a homomorphism
+-- 3) Apply 1st isomorphism theorem to ϕ
+
+
+
+theorem coordinateRingEquivQuotientVanishingIdeal (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    ∃ ψ : (coordinateRing V isVar ≃+* (MvPolynomial σ K) ⧸ (MvPolynomial.vanishingIdeal K V)), true := by
+
   sorry
 
 
@@ -95,8 +108,8 @@ lemma polyMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvPolynom
 -- I(V) is a prime ideal <=> k[V] is an integral domain follows from ring theory and k[V] ≅ k[x1,...,xn]/I(V) see mathlib below
 -- https://leanprover-community.github.io/mathlib4_docs/Mathlib/RingTheory/Ideal/Quotient/Basic.html#Ideal.Quotient.isDomain_iff_prime
 -- https://leanprover-community.github.io/mathlib4_docs/Mathlib/Algebra/Ring/Defs.html#IsDomain
-theorem irred_iff_coordRing_isIntegralDomain (V : Set (σ → K)) (k_V : coordRing V) :
-    isIrreducible V ↔ coordRing.IsDomain := by
+theorem irred_iff_coordinateRing_isIntegralDomain (V : Set (σ → K))  (isVar : isAffineVariety V) :
+    isIrreducible V ↔ (coordinateRing V isVar).IsDomain := by
   -- apply irreduciblePrimeIdeal theorem
   -- apply isDomain_iff_prime to coordRing and I(V)
   sorry
