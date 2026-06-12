@@ -2,6 +2,7 @@ import Mathlib.Algebra.MvPolynomial.Basic
 import Mathlib.Algebra.MvPolynomial.Eval
 import Mathlib.RingTheory.Nullstellensatz
 import Mathlib.RingTheory.Ideal.Quotient.Basic
+import Mathlib.RingTheory.Ideal.Quotient.Operations
 
 
 import Algebraicgeometry.FormFundRes
@@ -45,12 +46,33 @@ def isScalarPolynomialMap (V : Set (σ → K)) (φ : V → K) : Prop :=
    ∧ isAffineVariety V
 
 -- Define the coordinate ring k[V] = {φ : V → K | φ is a polynomial map}
+-- since the set of all functions from V → K with + and * is a ring
+-- we can define k[V] as a subring so that we don't have to prove all the ring axioms from scratch
 def coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V → K) where
   carrier := { φ : V → K | isScalarPolynomialMap V φ }
+  -- proving the axioms
   add_mem' := by
-    sorry
+    intro a b ha hb
+    rcases ha with ⟨pa,hpa⟩
+    rcases hb with ⟨pb,hpb⟩
+    use pa + pb
+    intro x
+    constructor
+    · simp only [Pi.add_apply, map_add]
+      rw[(hpa x).left,(hpb x).left]
+    · exact isVar
+
   mul_mem' := by
-    sorry
+    intro a b ha hb
+    rcases ha with ⟨pa,hpa⟩
+    rcases hb with ⟨pb,hpb⟩
+    use pa * pb
+    intro x
+    constructor
+    · simp only [Pi.mul_apply, map_mul]
+      rw[(hpa x).left,(hpb x).left]
+    · exact isVar
+
   one_mem' := by
     use 1
     intro x
@@ -59,7 +81,14 @@ def coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V
     · exact isVar
 
   neg_mem' := by
-    sorry
+    intro ψ h
+    rcases h with ⟨p,hp⟩
+    use -p
+    intro x
+    constructor
+    · simp only [Pi.neg_apply, map_neg, neg_inj]
+      exact (hp x).left
+    · exact isVar
 
   zero_mem' := by
     use 0
@@ -90,17 +119,18 @@ lemma polynomialMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvP
 
 
 -- Goal: Show that k[V] is isomorphic to k[x1,...,xn]/I(V)
--- 1) Create map ϕ : k[x1,...,xn] → k[V] defined as f
--- 2) Show that ϕ is a homomorphism
--- 3) Apply 1st isomorphism theorem to ϕ
+-- 1) Create map ψ : k[x1,...,xn] → k[V] defined as f
+-- 2) Show that ψ is a homomorphism
+-- 3) Apply 1st isomorphism theorem to ψ from Mathlib: RingHom.quotientKerEquivRange
+-- 4) Show that ker ψ = I(V)
+-- 5) Show that im ψ = k[V]
 
 
 
-theorem coordinateRingEquivQuotientVanishingIdeal (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    ∃ ψ : (coordinateRing V isVar ≃+* (MvPolynomial σ K) ⧸ (MvPolynomial.vanishingIdeal K V)), true := by
+def coordinateRingIsomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    (coordinateRing V isVar ≃+* (MvPolynomial σ K) ⧸ (MvPolynomial.vanishingIdeal K V)) :=
 
   sorry
-
 
 
 
@@ -108,8 +138,13 @@ theorem coordinateRingEquivQuotientVanishingIdeal (V : Set (σ → K)) (isVar : 
 -- I(V) is a prime ideal <=> k[V] is an integral domain follows from ring theory and k[V] ≅ k[x1,...,xn]/I(V) see mathlib below
 -- https://leanprover-community.github.io/mathlib4_docs/Mathlib/RingTheory/Ideal/Quotient/Basic.html#Ideal.Quotient.isDomain_iff_prime
 -- https://leanprover-community.github.io/mathlib4_docs/Mathlib/Algebra/Ring/Defs.html#IsDomain
-theorem irred_iff_coordinateRing_isIntegralDomain (V : Set (σ → K))  (isVar : isAffineVariety V) :
-    isIrreducible V ↔ (coordinateRing V isVar).IsDomain := by
-  -- apply irreduciblePrimeIdeal theorem
+theorem irred_iff_coordRing_isDomain (V : Set (σ → K))  (isVar : isAffineVariety V) :
+    isIrreducible V ↔ IsDomain (coordinateRing V isVar) := by
+  -- apply V is irreducible <=> I(V) is a prime ideal
+  rw[irreduciblePrimeIdeal]
+  -- apply isomorphism definition and use theorem .isDomain_iff that says if A ≃+* B then isDomain A iff isDomain B
+  rw[(coordinateRingIsomorphism V isVar).isDomain_iff]
   -- apply isDomain_iff_prime to coordRing and I(V)
-  sorry
+  rw[Ideal.Quotient.isDomain_iff_prime]
+  -- only goal left is to confirm V is an affine variety
+  exact isVar
