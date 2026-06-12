@@ -77,7 +77,7 @@ def coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V
     use 1
     intro x
     constructor
-    · simp
+    · simp only [Pi.one_apply, map_one]
     · exact isVar
 
   neg_mem' := by
@@ -94,7 +94,7 @@ def coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V
     use 0
     intro x
     constructor
-    · simp
+    · simp only [Pi.zero_apply, map_zero]
     · exact isVar
 
 -- similarly, to define the lemma below I need a version of polynomialMapping from V → K
@@ -104,7 +104,6 @@ def scalarPolynomialMap (f : MvPolynomial σ K) (V : Set (σ → K)) (isVar : is
 
 -- Two polynomials f,g ∈ K[x1,...,xn] represent the same polynomial map φ : V → K  iff  f - g ∈ I(V)
 -- where I(V) = MvPolynomial.vanishingIdeal V from Mathlib
-------////////////////////////NEED TO THINK OF A BETTER NAME//////////////////////////-----------------/
 lemma scalarPolynomialMapEquivalence (f : MvPolynomial σ K) (g : MvPolynomial σ K)
     (V : Set (σ → K)) (isVar : isAffineVariety V) :
     scalarPolynomialMap f V = scalarPolynomialMap g V ↔ (f - g) ∈ MvPolynomial.vanishingIdeal K V  := by
@@ -126,9 +125,47 @@ lemma polynomialMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvP
 -- 5) Show that im ψ = k[V]
 
 
+-- define a homomorphism K[x1,...,xn] → K[V] so that f
+def polynomialHomomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) : (MvPolynomial σ K) →+* (V → K) := {
+  -- the map takes polynomials in K[σ] and restricts their domain to V resulting in a polynomial in k[V]
+  toFun := fun p => (fun (x : V) => (MvPolynomial.eval x) p)
+  -- prove that this map is a homomorphism
+  -- show that f(0) = 0
+  map_zero' := by
+    simp only [map_zero]
+    rfl
+  -- show that f(1) = 1
+  map_one' := by
+    simp only [map_one]
+    rfl
+  -- show that f(x+y) = f(x) + f(y)
+  map_add' := by
+    intro x y
+    simp only [map_add]
+    rfl
+  -- show that f(xy) = f(x)f(y)
+  map_mul' := by
+    intro x y
+    simp only [map_mul]
+    rfl
+}
+
+lemma ker_eq_vanishingIdeal (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    RingHom.ker (polynomialHomomorphism V isVar) = (MvPolynomial.vanishingIdeal K V) := by
+  sorry
+
+
+lemma range_eq_coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    RingHom.range (polynomialHomomorphism V isVar) = (coordinateRing V isVar) := by
+  sorry
+
 
 def coordinateRingIsomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    (coordinateRing V isVar ≃+* (MvPolynomial σ K) ⧸ (MvPolynomial.vanishingIdeal K V)) :=
+    ((MvPolynomial σ K) ⧸ (MvPolynomial.vanishingIdeal K V) ≃+* coordinateRing V isVar) :=
+  -- apply 1st isomorphism theorem to the homomorphism defined above
+  RingHom.quotientKerEquivRange (polynomialHomomorphism V isVar)
+  rw[ker_eq_vanishingIdeal, range_eq_coordinateRing]
+
 
   sorry
 
