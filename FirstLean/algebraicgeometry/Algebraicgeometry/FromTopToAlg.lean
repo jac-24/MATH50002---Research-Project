@@ -179,7 +179,6 @@ def saturationIdeal (I J : Ideal (MvPolynomial σ K)) : Ideal (MvPolynomial σ K
     simp [Ideal.mul_mem_left, hn]
 
 
-
 theorem saturationSubsetIdeal [Fintype σ] {I J : Ideal (MvPolynomial σ K)} :
         (saturationIdeal I J) ≤ MvPolynomial.vanishingIdeal K
        (MvPolynomial.zeroLocus K I \ MvPolynomial.zeroLocus K J) := by
