@@ -23,7 +23,6 @@ variable {K : Type*} [Field K]
 variable {σ : Type*}
 
 
-
 def isAffineVariety (V : Set (σ → K)) : Prop :=
   ∃ F : Set (MvPolynomial σ K), V = affineVariety F
 

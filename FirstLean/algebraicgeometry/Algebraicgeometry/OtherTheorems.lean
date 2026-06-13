@@ -32,7 +32,6 @@ theorem notInZeroLocus {x : σ → K} {I : Ideal (MvPolynomial σ K)} :
   exact MvPolynomial.mem_zeroLocus_iff
 
 
-
 -- This theorem states that affine varieties are closed under intersections and in fact
 -- the intersection of two affine varieties is the affine variety of their union
 theorem closedUnderIntersection (F G : Set (MvPolynomial σ K)) :
