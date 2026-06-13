@@ -27,16 +27,6 @@ def isPolynomialMapping (V : Set (σ → K)) (W : Set (τ → K)) (φ : V → (�
   ∧ ∀ x : V , φ x ∈ W --checks that image of φ is a subset of W
   ∧ isAffineVariety V  ∧ isAffineVariety W --checks that V and W are affine varieties
 
-/- Let V ⊆ K^m, W ⊆ K^n be affine varieties
-  A function φ : V → W is a polynomial mapping
-  iff there exist polynomials f_1,...,f_n ∈ k[x1,...,xm] s.t.
-  φ (a_1,..,a_m) = (f_1(a_1,..,a_m),...,f_n(a_1,..,a_m))
--/
--- polynomialMapping takes a set of polynomials and returns the polynomial map
-def polynomialMapping (F : τ → (MvPolynomial σ K)) (V : Set (σ → K)) (isVar : isAffineVariety V)
-    : V → (τ → K) :=
-  fun (x : V) (t : τ) => (MvPolynomial.eval x) (F t)
-
 
 -- because isPolynomialMapping takes φ : K^n → K^m and in Lean K is not the same as (Fin 1) → K
 -- I had to create a new function isScalarPolynomialMap
@@ -97,36 +87,6 @@ def coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V
     · simp only [Pi.zero_apply, map_zero]
     · exact isVar
 
--- similarly, to define the lemma below I need a version of polynomialMapping from V → K
-def scalarPolynomialMap (f : MvPolynomial σ K) (V : Set (σ → K)) (isVar : isAffineVariety V) : V → K :=
-  fun (x : V) => (MvPolynomial.eval x) f
-
-/-
-
--- Two polynomials f,g ∈ K[x1,...,xn] represent the same polynomial map φ : V → K  iff  f - g ∈ I(V)
--- where I(V) = MvPolynomial.vanishingIdeal V from Mathlib
-lemma scalarPolynomialMapEquivalence (f : MvPolynomial σ K) (g : MvPolynomial σ K)
-    (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    scalarPolynomialMap f V = scalarPolynomialMap g V ↔ (f - g) ∈ MvPolynomial.vanishingIdeal K V  := by
-  sorry
-
-
-lemma polynomialMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvPolynomial σ K))
-    (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    ∀ t : τ , scalarPolynomialMap (F t) V = scalarPolynomialMap (G t) V
-    ↔ (F t - G t) ∈ MvPolynomial.vanishingIdeal K V := by
-  sorry
-
--/
-
-
--- Goal: Show that k[V] is isomorphic to k[x1,...,xn]/I(V)
--- 1) Create map ψ : k[x1,...,xn] → k[V] defined as f
--- 2) Show that ψ is a homomorphism
--- 3) Apply 1st isomorphism theorem to ψ from Mathlib: RingHom.quotientKerEquivRange
--- 4) Show that ker ψ = I(V)
--- 5) Show that im ψ = k[V]
-
 
 -- define a homomorphism K[x1,...,xn] → K[V] so that f
 def polynomialHomomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) : (MvPolynomial σ K) →+* (V → K) := {
@@ -151,8 +111,7 @@ def polynomialHomomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) : (M
     intro x y
     simp only [map_mul]
     rfl
-}
-
+  }
 
 
 -- ker(hom) = I(V)
@@ -180,34 +139,34 @@ lemma ker_eq_vanishingIdeal (V : Set (σ → K)) (isVar : isAffineVariety V) :
     -- theorem congr_fun (h : f = g) (a : α) : f a = g a := (from Mathlib)
     exact congr_fun inKer ⟨x,hx⟩
 
-lemma mem_coordinateRing_iff (V : Set (σ → K)) (isVar : isAffineVariety V) (f : V → K) :
-    f ∈ coordinateRing V isVar ↔ coco := by
 
-  sorry
-
--- im(hom) ≃+* K[V]
-def range_eq_coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    RingHom.range (polynomialHomomorphism V isVar) ≃+* (coordinateRing V isVar) := {
-     -- The forward function (im(hom) → K[V])
-    toFun := fun p => p
-    -- type ↥(polynomialHomomorphism V isVar).range but is expected to have type
-    --↥(coordinateRing V isVar)
-
-    -- The inverse function (K[V] → im(hom))
-    invFun := fun b => sorry
-
-    -- Proof that: invFun (toFun a) = a
-    left_inv := by sorry
-
-    -- Proof that: toFun (invFun b) = b
-    right_inv := by sorry
-
-    -- Proof that: toFun (x * y) = toFun x * toFun y
-    map_mul' := by sorry
-
-    -- Proof that: toFun (x + y) = toFun x + toFun y
-    map_add' := by sorry
-  }
+-- im(hom) = K[V]
+lemma range_eq_coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    RingHom.range (polynomialHomomorphism V isVar) = (coordinateRing V isVar) := by
+  ext f
+  -- ⊢ f ∈ (polynomialHomomorphism V isVar).range ↔ f ∈ coordinateRing V isVar
+  constructor
+  -- im(hom) ⊆ K[V]
+  · intro inRange -- f ∈ (polynomialHomomorphism V isVar).range
+    simp [polynomialHomomorphism] at inRange
+    obtain ⟨p,hp⟩ := inRange -- p : MvPolynomial σ K, hp : (fun x => (MvPolynomial.eval ↑x) p) = f
+    -- to show that f ∈ coordinateRing V isVar we just need to prove that f is a scalar poly map
+    have h : isScalarPolynomialMap V f := by
+      unfold isScalarPolynomialMap
+      use p
+      intro x
+      -- use refine tactic with theorem congr_fun (h : f = g) (a : α) : f a = g a := (from Mathlib)
+      refine ⟨congr_fun hp.symm x, isVar⟩
+    exact h
+  -- K[V] ⊆ im(hom)
+  · intro inCoordRing
+    simp [coordinateRing] at inCoordRing
+    simp [isScalarPolynomialMap] at inCoordRing
+    obtain ⟨p,h⟩ := inCoordRing -- p : MvPolynomial σ K, h : ∀ (a : σ → K) (b : a ∈ V), f ⟨a, b⟩ = (MvPolynomial.eval a) p ∧ isAffineVariety V
+    simp [polynomialHomomorphism] -- unfold polynomialHomomorphism
+    use p
+    ext x -- using extensionality to unpack lambda function in the goal
+    exact (h x x.2).1.symm -- evaluate h at x and pass in x.2 which is the proof that x ∈ V, then use .1 to take the first part of AND and .symm because the goal equality is the other way around
 
 
 def coordinateRingIsomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) :
@@ -220,7 +179,8 @@ def coordinateRingIsomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) :
      (RingHom.quotientKerEquivRange (polynomialHomomorphism V isVar))
   --  im(hom) ≃+* k[V] by range_eq_coordinateRing
   let equiv3 : (polynomialHomomorphism V isVar).range ≃+* (coordinateRing V isVar) :=
-    (range_eq_coordinateRing V isVar)
+    -- we need to use the typecasting tactic A = B ▸ A ≃+* B to rewrite A ≃+* B as A ≃+* A and then apply reflexivity
+    (range_eq_coordinateRing V isVar) ▸ RingEquiv.refl (polynomialHomomorphism V isVar).range
   -- chain all the isomorphisms together using transitivity
   (equiv1.trans equiv2).trans equiv3
 
@@ -239,3 +199,38 @@ theorem irred_iff_coordRing_isDomain (V : Set (σ → K))  (isVar : isAffineVari
   rw[Ideal.Quotient.isDomain_iff_prime]
   -- only goal left is to confirm V is an affine variety
   exact isVar
+
+
+/- EXTRA CODE
+
+  Let V ⊆ K^m, W ⊆ K^n be affine varieties
+  A function φ : V → W is a polynomial mapping
+  iff there exist polynomials f_1,...,f_n ∈ k[x1,...,xm] s.t.
+  φ (a_1,..,a_m) = (f_1(a_1,..,a_m),...,f_n(a_1,..,a_m))
+
+-- polynomialMapping takes a set of polynomials and returns the polynomial map
+def polynomialMapping (F : τ → (MvPolynomial σ K)) (V : Set (σ → K)) (isVar : isAffineVariety V)
+    : V → (τ → K) :=
+  fun (x : V) (t : τ) => (MvPolynomial.eval x) (F t)
+
+
+-- similarly, to define the lemma below I need a version of polynomialMapping from V → K
+def scalarPolynomialMap (f : MvPolynomial σ K) (V : Set (σ → K)) (isVar : isAffineVariety V) : V → K :=
+  fun (x : V) => (MvPolynomial.eval x) f
+
+
+-- Two polynomials f,g ∈ K[x1,...,xn] represent the same polynomial map φ : V → K  iff  f - g ∈ I(V)
+-- where I(V) = MvPolynomial.vanishingIdeal V from Mathlib
+lemma scalarPolynomialMapEquivalence (f : MvPolynomial σ K) (g : MvPolynomial σ K)
+    (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    scalarPolynomialMap f V = scalarPolynomialMap g V ↔ (f - g) ∈ MvPolynomial.vanishingIdeal K V  := by
+  sorry
+
+
+lemma polynomialMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvPolynomial σ K))
+    (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    ∀ t : τ , scalarPolynomialMap (F t) V = scalarPolynomialMap (G t) V
+    ↔ (F t - G t) ∈ MvPolynomial.vanishingIdeal K V := by
+  sorry
+
+-/
