@@ -101,6 +101,7 @@ def coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) : Subring (V
 def scalarPolynomialMap (f : MvPolynomial σ K) (V : Set (σ → K)) (isVar : isAffineVariety V) : V → K :=
   fun (x : V) => (MvPolynomial.eval x) f
 
+/-
 
 -- Two polynomials f,g ∈ K[x1,...,xn] represent the same polynomial map φ : V → K  iff  f - g ∈ I(V)
 -- where I(V) = MvPolynomial.vanishingIdeal V from Mathlib
@@ -115,6 +116,8 @@ lemma polynomialMapEquivalence (F : τ → (MvPolynomial σ K)) (G : τ → (MvP
     ∀ t : τ , scalarPolynomialMap (F t) V = scalarPolynomialMap (G t) V
     ↔ (F t - G t) ∈ MvPolynomial.vanishingIdeal K V := by
   sorry
+
+-/
 
 
 -- Goal: Show that k[V] is isomorphic to k[x1,...,xn]/I(V)
@@ -150,25 +153,76 @@ def polynomialHomomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) : (M
     rfl
 }
 
+
+
+-- ker(hom) = I(V)
 lemma ker_eq_vanishingIdeal (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    RingHom.ker (polynomialHomomorphism V isVar) = (MvPolynomial.vanishingIdeal K V) := by
+    (MvPolynomial.vanishingIdeal K V) = RingHom.ker (polynomialHomomorphism V isVar) := by
+  ext p
+  -- ⊢ p ∈ MvPolynomial.vanishingIdeal K V ↔ p ∈ RingHom.ker (polynomialHomomorphism V isVar)
+  constructor
+  -- show that I(V) ⊆ ker(hom)
+  · intro inIdeal
+    simp only [RingHom.mem_ker]
+    rw[MvPolynomial.mem_vanishingIdeal_iff] at inIdeal
+    -- define f = image of poly p under homomorphism
+    let f := (polynomialHomomorphism V isVar).toFun p
+    have h : f = 0 := by
+      ext x
+      apply inIdeal
+      simp
+    exact h
+  -- show that ker(hom) ⊆ I(V)
+  · intro inKer x hx
+    simp only [MvPolynomial.aeval_eq_eval]
+    rw[RingHom.mem_ker] at inKer
+    simp [polynomialHomomorphism] at inKer
+    -- theorem congr_fun (h : f = g) (a : α) : f a = g a := (from Mathlib)
+    exact congr_fun inKer ⟨x,hx⟩
+
+lemma mem_coordinateRing_iff (V : Set (σ → K)) (isVar : isAffineVariety V) (f : V → K) :
+    f ∈ coordinateRing V isVar ↔ coco := by
+
   sorry
 
+-- im(hom) ≃+* K[V]
+def range_eq_coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) :
+    RingHom.range (polynomialHomomorphism V isVar) ≃+* (coordinateRing V isVar) := {
+     -- The forward function (im(hom) → K[V])
+    toFun := fun p => p
+    -- type ↥(polynomialHomomorphism V isVar).range but is expected to have type
+    --↥(coordinateRing V isVar)
 
-lemma range_eq_coordinateRing (V : Set (σ → K)) (isVar : isAffineVariety V) :
-    RingHom.range (polynomialHomomorphism V isVar) = (coordinateRing V isVar) := by
-  sorry
+    -- The inverse function (K[V] → im(hom))
+    invFun := fun b => sorry
+
+    -- Proof that: invFun (toFun a) = a
+    left_inv := by sorry
+
+    -- Proof that: toFun (invFun b) = b
+    right_inv := by sorry
+
+    -- Proof that: toFun (x * y) = toFun x * toFun y
+    map_mul' := by sorry
+
+    -- Proof that: toFun (x + y) = toFun x + toFun y
+    map_add' := by sorry
+  }
 
 
 def coordinateRingIsomorphism (V : Set (σ → K)) (isVar : isAffineVariety V) :
     ((MvPolynomial σ K) ⧸ (MvPolynomial.vanishingIdeal K V) ≃+* coordinateRing V isVar) :=
-  -- apply 1st isomorphism theorem to the homomorphism defined above
-  RingHom.quotientKerEquivRange (polynomialHomomorphism V isVar)
-  rw[ker_eq_vanishingIdeal, range_eq_coordinateRing]
-
-
-  sorry
-
+  -- I(V) = ker(hom) => K[σ]/I(V) ≃+* K[σ]/ker(hom) using Mathlib Ideal.quotEquivOfEq
+  let equiv1 : (MvPolynomial σ K) ⧸ (MvPolynomial.vanishingIdeal K V) ≃+* (MvPolynomial σ K) ⧸ (RingHom.ker (polynomialHomomorphism V isVar)) :=
+    (Ideal.quotEquivOfEq (ker_eq_vanishingIdeal V isVar))
+  -- K[σ]/ker(hom) ≃+* im(hom) by 1st isomorphism theorem defined as RingHom.quotientKerEquivRange in Mathlib
+  let equiv2 : (MvPolynomial σ K) ⧸ (RingHom.ker (polynomialHomomorphism V isVar)) ≃+* (polynomialHomomorphism V isVar).range :=
+     (RingHom.quotientKerEquivRange (polynomialHomomorphism V isVar))
+  --  im(hom) ≃+* k[V] by range_eq_coordinateRing
+  let equiv3 : (polynomialHomomorphism V isVar).range ≃+* (coordinateRing V isVar) :=
+    (range_eq_coordinateRing V isVar)
+  -- chain all the isomorphisms together using transitivity
+  (equiv1.trans equiv2).trans equiv3
 
 
 -- V is irreducible <=> I(V) is a prime ideal already proved by Jibreel
@@ -180,8 +234,8 @@ theorem irred_iff_coordRing_isDomain (V : Set (σ → K))  (isVar : isAffineVari
   -- apply V is irreducible <=> I(V) is a prime ideal
   rw[irreduciblePrimeIdeal]
   -- apply isomorphism definition and use theorem .isDomain_iff that says if A ≃+* B then isDomain A iff isDomain B
-  rw[(coordinateRingIsomorphism V isVar).isDomain_iff]
-  -- apply isDomain_iff_prime to coordRing and I(V)
+  rw[(coordinateRingIsomorphism V isVar).symm.isDomain_iff]
+  -- apply IsDomain (R ⧸ I) ↔ I.IsPrime
   rw[Ideal.Quotient.isDomain_iff_prime]
   -- only goal left is to confirm V is an affine variety
   exact isVar
