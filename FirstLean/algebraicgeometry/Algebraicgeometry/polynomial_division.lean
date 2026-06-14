@@ -5,7 +5,7 @@ open Polynomial Set Pointwise
 variable {K : Type} [Field K] [Inhabited K] [DecidableEq K]
 
 
--- A conceptual helper function you would need to write
+-- A conceptual helper function to drop zero coefficients
 def dropTrailingZeros (xs : List K) : List K :=
   (xs.reverse.dropWhile (fun x => x = 0)).reverse
 
