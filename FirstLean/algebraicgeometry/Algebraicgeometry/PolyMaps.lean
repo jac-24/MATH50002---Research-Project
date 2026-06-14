@@ -23,8 +23,8 @@ variable {τ : Type*}
 -- φ takes as an input a point in the affine variety V ⊆ K^m
 -- and returns a point in the affine variety W ⊆ K^n
 def isPolynomialMapping (V : Set (σ → K)) (W : Set (τ → K)) (φ : V → (τ → K)) : Prop :=
-  ∃ F : τ → (MvPolynomial σ K), ∀ x : V, ∀ t : τ, (φ x) t  = (MvPolynomial.eval x) (F t)
-  ∧ ∀ x : V , φ x ∈ W --checks that image of φ is a subset of W
+  (∃ F : τ → (MvPolynomial σ K), ∀ x : V, ∀ t : τ, (φ x) t  = (MvPolynomial.eval x) (F t))
+  ∧ (∀ x : V , φ x ∈ W) --checks that image of φ is a subset of W
   ∧ isAffineVariety V  ∧ isAffineVariety W --checks that V and W are affine varieties
 
 
@@ -33,7 +33,7 @@ def isPolynomialMapping (V : Set (σ → K)) (W : Set (τ → K)) (φ : V → (�
 -- isScalarPolynomialMap checks if φ : V → K is a polynomial map
 def isScalarPolynomialMap (V : Set (σ → K)) (φ : V → K) : Prop :=
   ∃ f : MvPolynomial σ K, ∀ x : V, φ x = (MvPolynomial.eval x) f
-   ∧ isAffineVariety V
+  ∧ isAffineVariety V
 
 -- Define the coordinate ring k[V] = {φ : V → K | φ is a polynomial map}
 -- since the set of all functions from V → K with + and * is a ring
@@ -199,6 +199,7 @@ theorem irred_iff_coordRing_isDomain (V : Set (σ → K))  (isVar : isAffineVari
   rw[Ideal.Quotient.isDomain_iff_prime]
   -- only goal left is to confirm V is an affine variety
   exact isVar
+
 
 
 /- EXTRA CODE
