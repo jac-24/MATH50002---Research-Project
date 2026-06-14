@@ -28,16 +28,6 @@ theorem idealGeneratesItself (I : Ideal (MvPolynomial σ K)) :
   simp only [Submodule.span_coe_eq_restrictScalars, Submodule.restrictScalars_self]
 
 
-theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
-  MvPolynomial.zeroLocus K (I + J) = MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J := by
-  rw [Submodule.add_eq_sup] -- I + J = I ⊔ J in Lean
-  nth_rw 1 [← idealGeneratesItself I, ← idealGeneratesItself J] -- Replace all instances of I and J by <I> and <J>
-  rw [← Ideal.span_union]
-  rw [zeroLocusOfGenSetIsVariety]
-  symm
-  apply closedUnderIntersection
-
-
 -- This theorem states that affine varieties are closed under intersections and in fact
 -- the intersection of two affine varieties is the affine variety of their union
 theorem closedUnderIntersection (F G : Set (MvPolynomial σ K)) :
@@ -56,6 +46,16 @@ theorem closedUnderIntersection (F G : Set (MvPolynomial σ K)) :
         apply h; exact Set.mem_union_left G hp -- Have x in the affine variety of the union so just need to prove p is in the union
       · intro p hp -- Analogous to above
         apply h; exact Set.mem_union_right F hp
+
+
+theorem sumZeroLocus (I J : Ideal (MvPolynomial σ K)) :
+  MvPolynomial.zeroLocus K (I + J) = MvPolynomial.zeroLocus K I ∩ MvPolynomial.zeroLocus K J := by
+  rw [Submodule.add_eq_sup] -- I + J = I ⊔ J in Lean
+  nth_rw 1 [← idealGeneratesItself I, ← idealGeneratesItself J] -- Replace all instances of I and J by <I> and <J>
+  rw [← Ideal.span_union]
+  rw [zeroLocusOfGenSetIsVariety]
+  symm
+  apply closedUnderIntersection
 
 
 theorem productZeroLocus (I J : Ideal (MvPolynomial σ K)) :
@@ -217,6 +217,14 @@ theorem zariskiClosureSubsetOfSaturation [Fintype σ] {I J : Ideal (MvPolynomial
   rw [zariskiClosure]
   apply MvPolynomial.zeroLocus_anti_mono
   exact saturationSubsetIdeal
+
+
+theorem idealLeqSaturation {I J : Ideal (MvPolynomial σ K)} :
+  I ≤ saturationIdeal I J := by
+  intro f hf g hg
+  use 1
+  simp only [pow_one]
+  exact Ideal.IsTwoSided.mul_mem_of_left g hf
 
 
 theorem varietyIsUnionOfVaretySumAndVarietySaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:

@@ -146,15 +146,6 @@ theorem zariskiClosureUnion (S T : Set (σ → K)) :
   exact vanishingIdealIntersectionUnion S T
 
 
--- not included in the text yet! add it. And maybe also do I:J subset of I:J∞
-theorem idealLeqSaturation {I J : Ideal (MvPolynomial σ K)} :
-  I ≤ saturationIdeal I J := by
-  intro f hf g hg
-  use 1
-  simp only [pow_one]
-  exact Ideal.IsTwoSided.mul_mem_of_left g hf
-
-
 --theorem quotientIsSubsetOfSaturation [Fintype σ] {I J: Ideal (MvPolynomial σ K)}:
 --      MvPolynomial.zeroLocus K (I.colon J) ⊆
 --      MvPolynomial.zeroLocus K (saturationIdeal I J) := by
